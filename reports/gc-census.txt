@@ -1,0 +1,68 @@
+=== tos-gc-d1.gcm
+  files with blocks   22 of 1602
+  blocks              487
+  methods             1: 185, 3: 302
+  packed bytes        79744495
+  unpacked bytes      143368204
+  ratio               1.80x
+  headers skipped for claiming more than 1048576 packed bytes  538
+
+  FILE                                             SIZE  BLOCKS       PACKED     UNPACKED
+  /BTL/BTLenemy.dat                            77952000     251     77945676    139790048
+  /npc_all.bin                                 87184096     101       651197      1368668
+  /BTL/BTLusual.dat                              935680       1       130512       265376
+  /genius_ex.bin                                 157792       8        88115       148256
+  /lloyd.bin                                     204896       8        73762       145008
+  /genius.bin                                    186272       6        71683       122296
+  /kratos_ex.bin                                 105408       8        71651       127872
+  /collet_ex.bin                                 101120       8        69451       128700
+  /lloyd_ex.bin                                  112896       8        68502       120384
+  /shihna_ex.bin                                  98656       8        62536       111740
+  /refill_ex.bin                                 107232       8        61611       111696
+  /presea_ex.bin                                 118208       8        60920       111888
+  /zelosz_ex.bin                                  97728       8        60220       106624
+  /regal_ex.bin                                   89280       8        55095       101824
+  /Kratos.bin                                    157312       6        51721        94904
+  /presea.bin                                    119584      10        44894       130464
+  /collet.bin                                    139872       6        41422        94320
+  /refill.bin                                    128288       6        38302        74016
+  /Regal.bin                                      92544       6        30986        65416
+  /zelosz.bin                                     90240       6        25894        57072
+  /shihna.bin                                    124768       6        24304        53912
+  /Minini.bin                                    198688       2        16041        37720
+
+  validation on /Kratos.bin: 6 blocks at step 1, 6 at step 32, 0 missed
+
+=== tos-gc-d2.gcm
+  files with blocks   22 of 1598
+  blocks              487
+  methods             1: 185, 3: 302
+  packed bytes        79744495
+  unpacked bytes      143368204
+  ratio               1.80x
+  headers skipped for claiming more than 1048576 packed bytes  492
+
+  FILE                                             SIZE  BLOCKS       PACKED     UNPACKED
+  /BTL/BTLenemy.dat                            77952000     251     77945676    139790048
+  /npc_all.bin                                 87184096     101       651197      1368668
+  /BTL/BTLusual.dat                              935680       1       130512       265376
+  /genius_ex.bin                                 157792       8        88115       148256
+  /lloyd.bin                                     204896       8        73762       145008
+  /genius.bin                                    186272       6        71683       122296
+  /kratos_ex.bin                                 105408       8        71651       127872
+  /collet_ex.bin                                 101120       8        69451       128700
+  /lloyd_ex.bin                                  112896       8        68502       120384
+  /shihna_ex.bin                                  98656       8        62536       111740
+  /refill_ex.bin                                 107232       8        61611       111696
+  /presea_ex.bin                                 118208       8        60920       111888
+  /zelosz_ex.bin                                  97728       8        60220       106624
+  /regal_ex.bin                                   89280       8        55095       101824
+  /Kratos.bin                                    157312       6        51721        94904
+  /presea.bin                                    119584      10        44894       130464
+  /collet.bin                                    139872       6        41422        94320
+  /refill.bin                                    128288       6        38302        74016
+  /Regal.bin                                      92544       6        30986        65416
+  /zelosz.bin                                     90240       6        25894        57072
+  /shihna.bin                                    124768       6        24304        53912
+  /Minini.bin                                    198688       2        16041        37720
+

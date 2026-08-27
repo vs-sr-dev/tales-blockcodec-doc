@@ -317,6 +317,8 @@ from the 1997 code only where the 1997 code is wrong.
 | **Tales of Destiny 2** | **PlayStation 2** | **2002** | **this format**, methods 0 / 1 / 3 — the *same source*, recompiled |
 | Venus & Braves | PlayStation 2 | 2003 | **no** — no decoder, on the same disc as Destiny 2 |
 | Tales of Phantasia | Game Boy Advance | 2003 | **no** — GBA BIOS `LZ77UnComp` / `RLUnComp` |
+| **Tales of Symphonia** | **GameCube** | **2003** | **this format**, methods 1 / 3 — on a *big-endian* machine |
+| **Tales of Symphonia** | **PlayStation 2** | **2004** | **this format** — the same source, *edited* |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
 
 ### The 2000 build is not a reimplementation
@@ -385,6 +387,89 @@ two different sets of constraints.
 
 [`reports/ps2-lineage.txt`](reports/ps2-lineage.txt).
 
+### The 2003 build is big-endian, and the header did not turn round
+
+*Tales of Symphonia* on the GameCube is the first time this format met a
+machine that stores its words the other way up, and the first time it met a
+console with its own decompression and its own opinions about loading — which
+is the reading under which the 2003 Game Boy Advance rebuild had been allowed
+to drop it.
+
+It did not drop it. `main.dol` carries the decoder **four times** — two
+routines, each linked twice, byte for byte identical — as PowerPC, with `4078`
+and `4079` appearing as `subfic`, `cmpwi` and `addi` immediates. Everything
+the source chose is unchanged: the control register refilled as
+`ori r0, r0, 0xFF00`, the ring cursor masked with `rlwinm r10, r10, 0, 20, 31`
+(that is `& 0x0FFF`), the length in the low nibble of the second token byte and
+the reference's top bits in the high nibble, the synthetic `(i, 0x00)` and
+`(i, 0xFF)` preload, and the copy loop unrolled by exactly eight. **487 of 487
+blocks on each of the two discs decode to their declared lengths under
+`tales_block.py` with no new dialect.**
+
+And the **nine-byte header stayed little-endian**:
+
+```
+01 1e 21 00 00 e4 3c 00 00
+   little-endian: method 1, packed 8478, unpacked 15588   <- decodes
+   big-endian:    method 1, packed 505479168, unpacked 3829137408
+```
+
+The container around it *is* big-endian — the archive holding these blocks
+counts its members with a big-endian `u32`, four bytes away. Section 1 above
+explains why, and it was written before anyone looked at a GameCube: the
+PlayStation decoder assembles all four bytes one `lbu` at a time, because a
+container can place a block at any alignment. Code that reads a `u32` byte by
+byte and shifts them together has no endianness of its own; it has whatever its
+constants say. Ported to a big-endian machine it goes on reading little-endian
+sizes, and nothing reports an error. The packer never had to be told about the
+GameCube, and was not.
+
+This was the field on which a third dialect was most likely to appear. It did
+not. Two dialects, six builds, four consoles, nine years, both byte orders, and
+the split is still 1995/1997.
+
+### The 2004 build is the first one somebody edited
+
+*Tales of Symphonia*'s PlayStation 2 port runs on the same R5900 as *Tales of
+Destiny 2* did two years earlier, so byte equality is available again — and it
+is the first time in this corpus that the strong test has been run on two
+builds of the same CPU and returned nothing:
+
+| Pair | CPUs | Identical words | Longest identical run, any alignment |
+|---|---|---:|---:|
+| Destiny 1997 ↔ Eternia 2000 | R3000A ↔ R3000A | 69 / 140 | **212 bytes** |
+| **Destiny 2 2002 ↔ Symphonia 2004** | **R5900 ↔ R5900** | **1 / 180** | **6 bytes** |
+
+Part of that is a change of toolchain: `SLPS_254.00` carries a `.comment`
+section reading `MW MIPS C Compiler (2.4.1.01)` and `SLPS_251.72` carries no
+compiler string at all.
+
+The rest is not, because a compiler does not change a constant. Every build
+from 1997 to 2003 clears the dictionary with an inline byte loop bounded by
+**4,078**. The 2004 build calls a subroutine with **4,080**:
+
+```
+2002:  addiu a0, zero, 4078      2004:  addiu a1, zero, 4080
+       sb    zero, 0(v1)                jal   0x001DF090
+       slt   v0, t1, a0                 ...
+       bne   v0, zero, ...       0x001DF090:  srl a1, a1, 4
+                                              sq  zero, 0(a0)   ; R5900 quadword
+                                              addiu a0, a0, 16
+```
+
+4,080 is 4,078 rounded up to a multiple of sixteen, so that the Emotion
+Engine's 128-bit store can be used. It clears two bytes the older code did not,
+harmlessly, both being inside the 4,096-byte ring. That is a hand edit to the
+decoder's source, made for this CPU — and the GameCube build a year *earlier*
+still clears the dictionary the 2002 way, so it is 2004 that departs, not 2003.
+
+The 2004 build also drops the I/O processor copy that 2002 carried: neither
+`IOPRP300.IMG` nor `IRXARC.BIN` contains a `4078` immediate anywhere. And it
+carries two *differently compiled* copies on the main CPU — 1,104 + 768 bytes
+against 1,520 + 1,176, with 2 identical words out of 276 — where the GameCube's
+two copies are byte for byte the same. See
+[gc-talesofsymphonia-doc](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc).
+
 ### The boundary tested on a single disc
 
 The *Tales of Destiny 2* disc is the sharpest negative control this
@@ -437,9 +522,14 @@ uses this format:
    one of them is real.
 3. **If the header shape is there but nothing decodes**, check the nibble
    order first — that is the one field the two known dialects disagree on, and
-   a third dialect would most plausibly differ there too. (Four titles in,
-   there is still no third dialect: the 2000 PlayStation build and the 2002
-   PlayStation 2 build both use the 1997 one unchanged.)
+   a third dialect would most plausibly differ there too. (Five titles in,
+   there is still no third dialect: 2000, 2002, 2003 and 2004 all use the 1997
+   one unchanged.)
+   **Do not try byte-swapping the header on a big-endian machine.** The 2003
+   GameCube build is big-endian throughout — its archives count their members
+   with big-endian words — and its nine-byte block headers are still
+   little-endian, because the decoder assembles each size one byte at a time
+   and never had a reason to care. Section 6.
 4. **If it decodes but comes out short**, check the dictionary. Try the
    preload and the empty ring, and try both cursor starts. Lengths alone
    cannot distinguish these; decode a block that should be a known container
@@ -461,29 +551,70 @@ PlayStation-dialect decoder found so far, and no other part of a game has a
 reason to load 4,078. On *Tales of Destiny 2* that filter returned seven sites
 across two files and both decoders were within a hundred bytes of one of them.
 
+**It survives a change of instruction set.** On PowerPC the constant appears
+in the low half of a D-form word instead of an I-type one — as `subfic`,
+`cmpwi` and `addi` — and the word is stored big-endian, but the constant is
+the packer's and does not move. On *Tales of Symphonia*'s GameCube build the
+filter returned twelve sites in four routines, and the *offsets within each
+routine were the same three*: `+17`, `+21`, `+216` words. A tool that does both
+instruction sets is
+[`ring_sites.py`](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc/blob/main/tools/ring_sites.py).
+
 It cuts the other way just as well. The absence of `4078` across a whole
 executable is strong evidence the decoder is not there, which is how *Venus &
-Braves* was ruled out without decoding anything.
+Braves* was ruled out without decoding anything — and how the 2004 build's two
+I/O processor images were ruled out in 2004.
+
+### What does *not* work: comparing routines across instruction sets
+
+The opcode-sequence measure in this repository's own tooling works because
+R3000A and R5900 share a mnemonic vocabulary. Across a real change of
+instruction set it does not. Mapping every instruction to what it *does* —
+load a byte, store a byte, add a constant, shift, compare, branch — and
+comparing those sequences scores the genuine GameCube/PlayStation 2 decoder
+pair at **16.5%**, and an arbitrary unrelated routine from the same executable
+at **16.5%** and **18.5%**. The measurement has no discriminating power, and
+the tool that produced it is published with that stated and with its controls
+printed unconditionally. Use the constants, the structure and a decode census
+instead. See
+[gc-talesofsymphonia-doc](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc).
 
 ---
 
 ## 8. Open
 
-* **~~Is there a third dialect?~~** *Answered, no — twice.* The question first
-  named *Tales of Eternia* as the title that would settle it, and the 2000
-  build turned out to share 212 bytes of object code with 1997. It then named
-  the PlayStation 2 as the remaining risk, and *Tales of Destiny 2* (2002)
-  settles that too: same two dialects, same nibble order, same preload, 9,469
-  of 9,469 blocks decoding under the unmodified reference decoder. Two
-  dialects, four titles, three consoles, seven years, and the split is still
-  1995/1997. What is left to test is the 2005 PSP port of *Eternia* and the
-  2006 PlayStation 2 remake of *Destiny*.
+* **~~Is there a third dialect?~~** *Answered, no — three times.* The question
+  first named *Tales of Eternia* as the title that would settle it, and the
+  2000 build turned out to share 212 bytes of object code with 1997. It then
+  named the PlayStation 2 as the remaining risk, and *Tales of Destiny 2*
+  (2002) settled that too. The last plausible place for one was a machine of
+  the opposite byte order, and *Tales of Symphonia* (GameCube, 2003) is that
+  machine: the decoder is there four times as PowerPC, the nibble order is
+  unchanged, and **the nine-byte header is still little-endian**. Two dialects,
+  six builds, four consoles, both byte orders, nine years, and the split is
+  still 1995/1997. What is left to test is the 2005 PSP port of *Eternia* and
+  the 2006 PlayStation 2 remake of *Destiny*.
+* **~~Was the source ever edited after 1997?~~** *Answered, yes — once, in
+  2004.* Every build from 1997 to 2003 clears the dictionary with an inline
+  byte loop bounded by 4,078. *Tales of Symphonia*'s PlayStation 2 port (2004)
+  calls a quadword `bzero` with 4,080 instead — 4,078 rounded up to a multiple
+  of sixteen so the Emotion Engine's 128-bit store can be used. On the same CPU
+  as the 2002 build, two years apart, the longest identical byte run at any
+  alignment between the two decoders is **six bytes**, against 212 for the
+  1997/2000 pair. Some of that is a change of compiler; the constant is not.
+  Section 6.
 * **What produced the blocks?** Everything here is about the decoders. The
   packer, which is where the shared constants actually live, has left no trace
   in any shipped image beyond its output. Four corpora now show its habits —
   it emits stored blocks below roughly 30 bytes (2000 only), it never expands,
   and on five blocks out of 21,054 it overshoots a trailing run by exactly one
-  byte — but the tool itself remains invisible. The 2002 disc adds one habit
+  byte — but the tool itself remains invisible. The 2003 GameCube corpus adds
+  one more habit and it is a large one: **its blocks are up to thirty times
+  bigger.** The largest block in the four titles to 2002 is around 30 KB; the
+  largest on the GameCube disc is **1,007,213 packed bytes**, and 251 blocks in
+  one file average 310 KB. The 24-bit size field always allowed it, so nothing
+  forced the old ceiling. Whatever drives the packer changed between 2002 and
+  2003. The 2002 disc adds one habit
   and removes another: the run escape is now overwhelmingly the default
   (8,040 of 8,142 blocks inside its bundles are method 3), and tiny members
   are no longer wrapped in a method-0 header at all — they are simply left raw
@@ -510,4 +641,21 @@ Braves* was ruled out without decoding anything.
   also renumbers the methods internally, dispatching on 2 and 4 instead of 1
   and 3 — the only place in four titles where the on-disc method byte is not
   used directly. Whether that is a second hand-port or the same source under
-  a different build configuration is unresolved.
+  a different build configuration is unresolved. Both 2003 and 2004 ship two
+  copies as well, and they disagree about what that means: the GameCube's two
+  are **byte for byte identical** over 1,616 and 1,332 bytes, which is a linker
+  pulling one object in twice, while the 2004 PlayStation 2's two are not even
+  the same length — 1,104 + 768 against 1,520 + 1,176, with 2 identical words
+  out of 276 — the second far more heavily unrolled than the first.
+* **Where the decoder runs.** In 2002 it ran on both processors. In 2004
+  neither I/O processor image contains a `4078` immediate at all: decompression
+  moved entirely onto the main CPU while the I/O processor took up CRI's `ROFS`
+  reader. Whether that was a decision about the codec or a consequence of
+  changing file system middleware is not answerable from the discs.
+* **Comparing across instruction sets.** The opcode-sequence method that
+  carried the 2002 result works because R3000A and R5900 share a mnemonic
+  vocabulary. Section 7 records the attempt to generalise it to PowerPC and its
+  failure — the real pair scores no better than an unrelated routine. Something
+  that survives a change of instruction set would be worth having; comparing
+  basic-block structure, or the sequence of loop trip counts and constants
+  rather than instructions, has not been tried.

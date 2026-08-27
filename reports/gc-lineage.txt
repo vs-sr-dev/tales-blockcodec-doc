@@ -1,0 +1,154 @@
+====================================================================
+ Where the decoder is, on each of the three images
+====================================================================
+
+-- Tales of Symphonia, PlayStation 2, 2004 -- SLPS_254.00 (EE, R5900)
+_work/ps2/SLPS_254.00, mips, 894656 words scanned
+
+ADDRESS      WORD       FORM        IMM  ROUTINE
+0x001216E0   0x66100FEF daddiu     4079  0x00121684 (+23 words)
+0x001C946C   0x240B0FEF addiu      4079  0x001C93D0 (+39 words)
+0x001C98BC   0x240B0FEE addiu      4078  0x001C9820 (+39 words)
+0x00242E9C   0x24190FEF addiu      4079  0x00242C5C (+144 words)
+0x00243484   0x24190FEE addiu      4078  0x0024324C (+142 words)
+
+5 sites
+
+-- the same disc's I/O processor images
+_work/ps2/IOPRP300.IMG, mips, 68836 words scanned
+
+no 4078 or 4079 immediate anywhere in this image.
+by section 7 of the codec specification that is evidence the
+decoder is not present, not merely that it was not found.
+
+_work/ps2/IRXARC.BIN, mips, 68816 words scanned
+
+no 4078 or 4079 immediate anywhere in this image.
+by section 7 of the codec specification that is evidence the
+decoder is not present, not merely that it was not found.
+
+-- Tales of Symphonia, GameCube, 2003 -- main.dol (Gekko, PowerPC)
+text0: 2416 words scanned, 0 sites
+text1: 380912 words scanned, 12 sites
+  0x8005D0CC   0x20090FEF subfic     4079  routine 0x8005D088 (+17 words)
+  0x8005D0DC   0x2C090FEF cmpwi      4079  routine 0x8005D088 (+21 words)
+  0x8005D3E8   0x39400FEF addi       4079  routine 0x8005D088 (+216 words)
+  0x8005D71C   0x20090FEE subfic     4078  routine 0x8005D6D8 (+17 words)
+  0x8005D72C   0x2C090FEE cmpwi      4078  routine 0x8005D6D8 (+21 words)
+  0x8005DA38   0x39400FEE addi       4078  routine 0x8005D6D8 (+216 words)
+  0x800D635C   0x20090FEF subfic     4079  routine 0x800D6318 (+17 words)
+  0x800D636C   0x2C090FEF cmpwi      4079  routine 0x800D6318 (+21 words)
+  0x800D6678   0x39400FEF addi       4079  routine 0x800D6318 (+216 words)
+  0x800D69AC   0x20090FEE subfic     4078  routine 0x800D6968 (+17 words)
+  0x800D69BC   0x2C090FEE cmpwi      4078  routine 0x800D6968 (+21 words)
+  0x800D6CC8   0x39400FEE addi       4078  routine 0x800D6968 (+216 words)
+
+====================================================================
+ 2002 PlayStation 2 against 2004 PlayStation 2 -- the same CPU,
+ so byte equality is available and is the strong test
+====================================================================
+
+the two routines
+  A SLPS_251.72 mips @ 0x0010A1B0
+  B SLPS_254.00 mips @ 0x001C93D0
+  instructions compared      180
+  identical words, in place  1 (0.6%)
+  longest identical byte run 6 bytes
+  action sequence            21.7% similar
+
+
+the two routines
+  A SLPS_251.72 mips @ 0x0010A1B0
+  B SLPS_254.00 mips @ 0x001C9820
+  instructions compared      180
+  identical words, in place  0 (0.0%)
+  longest identical byte run 6 bytes
+  action sequence            22.2% similar
+
+
+the two routines
+  A SLPS_251.72 mips @ 0x0010A1B0
+  B SLPS_254.00 mips @ 0x00242C5C
+  instructions compared      180
+  identical words, in place  1 (0.6%)
+  longest identical byte run 6 bytes
+  action sequence            32.8% similar
+
+
+the two routines
+  A SLPS_251.72 mips @ 0x0010A1B0
+  B SLPS_254.00 mips @ 0x0024324C
+  instructions compared      180
+  identical words, in place  1 (0.6%)
+  longest identical byte run 6 bytes
+  action sequence            29.4% similar
+
+
+====================================================================
+ 2003 GameCube against the PlayStation 2 builds -- across instruction
+ sets, where byte equality is impossible by construction.
+
+ This section is a NEGATIVE result.  The action-sequence measure below
+ scores the real pair the same as, or below, an unrelated routine from
+ the same executable.  It does not discriminate.  See docs/06 and
+ docs/99; the tool prints its controls for exactly this reason.
+====================================================================
+
+the two routines
+  A main.dol ppc @ 0x8005D6D8
+  B SLPS_254.00 mips @ 0x001C9820
+  instructions compared      200
+  longest identical byte run 3 bytes
+  action sequence            16.5% similar
+
+control: the same A against an unrelated routine
+  A main.dol ppc @ 0x8005D6D8
+  B main.dol ppc @ 0x80009EF4
+  instructions compared      200
+  identical words, in place  0 (0.0%)
+  longest identical byte run 4 bytes
+  action sequence            16.5% similar
+
+  the pair scores +0.0 points over this control
+
+control: the same A against an unrelated routine
+  A main.dol ppc @ 0x8005D6D8
+  B main.dol ppc @ 0x8000D0A0
+  instructions compared      200
+  identical words, in place  0 (0.0%)
+  longest identical byte run 5 bytes
+  action sequence            18.5% similar
+
+  the pair scores -2.0 points over this control
+
+
+the two routines
+  A main.dol ppc @ 0x8005D6D8
+  B SLPS_251.72 mips @ 0x0010A1B0
+  instructions compared      200
+  longest identical byte run 4 bytes
+  action sequence            15.0% similar
+
+control: the same A against an unrelated routine
+  A main.dol ppc @ 0x8005D6D8
+  B main.dol ppc @ 0x80006FE8
+  instructions compared      200
+  identical words, in place  0 (0.0%)
+  longest identical byte run 4 bytes
+  action sequence            6.0% similar
+
+  the pair scores +9.0 points over this control
+
+
+====================================================================
+ The four GameCube copies against each other, and the four
+ PlayStation 2 copies against each other
+====================================================================
+
+GameCube main.dol
+  0x8005D088 vs 0x800D6318  404 words / 1616 bytes  identical: YES, byte for byte
+  0x8005D6D8 vs 0x800D6968  333 words / 1332 bytes  identical: YES, byte for byte
+
+PlayStation 2 SLPS_254.00
+  0x001C93D0 (276 words) vs 0x00242C5C (380 words)  identical words over 276: 2
+  0x001C9820 (192 words) vs 0x0024324C (294 words)  identical words over 192: 1

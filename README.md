@@ -3,8 +3,10 @@
 **The Tales block codec, documented once.** The in-house LZSS that Wolf Team
 shipped on the Super Famicom in 1995, used again on the PlayStation in 1997,
 still shipping in 2000 — by then not merely the same format but, for 212
-bytes, literally the same machine code — and still shipping in 2002, on the
-PlayStation 2, on a disc that also proves it was never Namco's format at all.
+bytes, literally the same machine code — still shipping in 2002 on the
+PlayStation 2, on a disc that also proves it was never Namco's format at all,
+and still shipping in 2003 on a **big-endian** console with its nine-byte
+header unturned. In 2004 somebody finally edited it.
 
 → **[tales-block-codec.md](tales-block-codec.md)** — the specification
 → **[tales_block.py](tales_block.py)** — the reference decoder, both dialects
@@ -14,6 +16,15 @@ For comparisons *across* instruction sets — where byte equality is impossible
 by construction — the opcode-sequence tool lives in the PlayStation 2
 pipeline, because it needs an ELF reader this repository has no other use for:
 [`ps2-talesofdestiny2-doc/tools/decoder_lineage.py`](https://github.com/vs-sr-dev/ps2-talesofdestiny2-doc/blob/main/tools/decoder_lineage.py).
+It works between R3000A and R5900, which share a mnemonic vocabulary. It does
+**not** generalise to a genuinely different instruction set; the attempt and
+its failure are recorded in section 7 and in
+[`gc-talesofsymphonia-doc/tools/xarch.py`](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc/blob/main/tools/xarch.py),
+which prints its controls unconditionally so the failure is visible. The tool
+that *does* generalise is the constant scan: `4078` and `4079` are the packer's,
+and they survive PowerPC, where
+[`ring_sites.py`](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc/blob/main/tools/ring_sites.py)
+finds them.
 
 Each *Tales* title I document produces two things: a repository about that
 build, and whatever it taught me about formats that are not specific to it.
@@ -75,6 +86,57 @@ reproduces this repository's own 212-byte result by a different method, which
 is what makes the zeros meaningful.
 [`reports/ps2-lineage.txt`](reports/ps2-lineage.txt),
 [`reports/ps2-census.txt`](reports/ps2-census.txt).
+
+## The result that carried it across a byte order
+
+*Tales of Symphonia*, GameCube, 2003. Every machine this format had touched was
+little-endian; the Gekko is not. The GameCube also supplies its own
+decompression and its own loader, which is the reading under which the 2003
+Game Boy Advance rebuild of *Phantasia* had been allowed to drop the format.
+
+`main.dol` carries the decoder **four times** — two routines, each linked twice,
+byte for byte identical over 1,616 and 1,332 bytes — as PowerPC. `4078` and
+`4079` appear as `subfic`, `cmpwi` and `addi` immediates, at the same three
+offsets inside each routine. `ori r0, r0, 0xFF00`; the ring cursor masked with
+`rlwinm r10, r10, 0, 20, 31`; the length in the low nibble of the second token
+byte; the copy loop unrolled by exactly eight. **487 of 487 blocks on each of
+the two discs decode to their declared lengths under `tales_block.py` with no
+new dialect and no GameCube branch.**
+
+And the field most likely to have produced a third dialect did not:
+
+```
+01 1e 21 00 00 e4 3c 00 00
+   little-endian: method 1, packed 8478, unpacked 15588   <- decodes
+   big-endian:    method 1, packed 505479168, unpacked 3829137408
+```
+
+The archive holding these blocks counts its members with a big-endian word four
+bytes away. The header is still little-endian, because the decoder assembles
+each size one `lbz` at a time and never had a reason to care — which section 1
+of the specification said, three years of pipelines before anyone looked at a
+GameCube.
+
+## The result that finally broke the chain
+
+*Tales of Symphonia*, PlayStation 2, 2004 — the same R5900 as *Tales of
+Destiny 2* in 2002, so byte equality is available and is the strong test. It
+returns nothing:
+
+| Pair | CPUs | Identical words | Longest identical run, any alignment |
+|---|---|---:|---:|
+| Destiny 1997 ↔ Eternia 2000 | R3000A ↔ R3000A | 69 / 140 | **212 bytes** |
+| **Destiny 2 2002 ↔ Symphonia 2004** | **R5900 ↔ R5900** | **1 / 180** | **6 bytes** |
+
+Part of that is a change of compiler. The rest is not, because a compiler does
+not change a constant. Every build from 1997 to 2003 clears the dictionary with
+an inline byte loop bounded by **4,078**; the 2004 build calls a quadword
+`bzero` with **4,080** — 4,078 rounded up to a multiple of sixteen so the
+Emotion Engine's 128-bit `sq` can be used.
+
+Seven years of "the same source, recompiled" end here. And the GameCube build a
+year *earlier* still clears the dictionary the 2002 way, so it is 2004 that
+departs, not 2003.
 
 ## The result that showed whose format it was
 
@@ -141,6 +203,8 @@ buffer, the PlayStation ones a ring — and on the 2002 PlayStation 2 disc it
 | Check | Result |
 |---|---|
 | 2002 PlayStation 2 corpus, unmodified reference decoder | **9,469 / 9,469** blocks exact, 329 MB → 1,413 MB, [`reports/ps2-census.txt`](reports/ps2-census.txt) |
+| 2003 GameCube corpus, unmodified reference decoder, **big-endian machine** | **487 / 487** blocks exact on each of two discs, 79.7 MB → 143.4 MB, [`reports/gc-census.txt`](reports/gc-census.txt) |
+| 2002 decoder against 2004, on one CPU | 1 identical word in 180, longest identical run **6 bytes** at any alignment, [`reports/gc-lineage.txt`](reports/gc-lineage.txt) |
 | 2002 decoder against 1997 and 2000, instruction by instruction | 0 identical words, ~50% opcode sequence; control reproduces 212 bytes, [`reports/ps2-lineage.txt`](reports/ps2-lineage.txt) |
 | Self-test, no image needed — the two dialects' run arithmetic | 4–18 and 19–274 **agree across dialects**, [`reports/selftest.txt`](reports/selftest.txt) |
 | Exhaustive scan of the 6 MiB Super Famicom image | **1,089 blocks**, 115 `$81` + 974 `$83`, every one decoding to its declared length |
@@ -198,6 +262,8 @@ Dependency-free Python 3, one file, no imports beyond `sys`.
 | Tales of Eternia | PlayStation | 2000 | **yes**, methods 0 / 1 / 3 — same object code | [ps1-talesofeternia-doc](https://github.com/vs-sr-dev/ps1-talesofeternia-doc) |
 | **Tales of Destiny 2** | **PlayStation 2** | **2002** | **yes**, methods 0 / 1 / 3 — same source, recompiled | [ps2-talesofdestiny2-doc](https://github.com/vs-sr-dev/ps2-talesofdestiny2-doc) |
 | Venus & Braves | PlayStation 2 | 2003 | no — no decoder, on the *Destiny 2* disc | [ps2-talesofdestiny2-doc](https://github.com/vs-sr-dev/ps2-talesofdestiny2-doc) |
+| **Tales of Symphonia** | **GameCube** | **2003** | **yes**, methods 1 / 3 — **on PowerPC**, header still little-endian | [gc-talesofsymphonia-doc](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc) |
+| **Tales of Symphonia** | **PlayStation 2** | **2004** | **yes** — same source, **edited** | [gc-talesofsymphonia-doc](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc) |
 | Tales of Phantasia | Game Boy Advance | 2003 | no — GBA BIOS `LZ77UnComp` | [snes-talesofphantasia-doc](https://github.com/vs-sr-dev/snes-talesofphantasia-doc) |
 | Tales of Berseria | PC | 2017 | no — zlib inside the TL engine | [pc-talesofberseria-doc](https://github.com/vs-sr-dev/pc-talesofberseria-doc) |
 
