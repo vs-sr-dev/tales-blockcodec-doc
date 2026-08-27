@@ -141,17 +141,17 @@ departs, not 2003.
 ## The first direct measurement of the packer
 
 The packer has never left anything in a shipped image but its output. In 2003
-and 2004 it produced that output **twice from the same input**: eighteen
+and 2004 it produced that output **twice from the same input**: nineteen
 character-model files appear under the same names on the GameCube discs and in
 the PlayStation 2 port, and the census reports identical block counts and
-identical unpacked lengths for all eighteen.
+identical unpacked lengths for all nineteen.
 
 | | blocks | packed | unpacked |
 |---|---:|---:|---:|
-| 2003, GameCube | 132 | 1,001,069 | 1,906,392 |
-| 2004, PlayStation 2 | 132 | **1,025,520** | 1,906,392 |
+| 2003, GameCube | 134 | 1,017,110 | 1,944,112 |
+| 2004, PlayStation 2 | 134 | **1,042,397** | 1,944,112 |
 
-Every one of the eighteen is **larger** in 2004, by +0.72% to +3.88%. None is
+Every one of the nineteen is **larger** in 2004, by +0.72% to +5.21%. None is
 smaller; none is the same. The block boundaries did not move, so the
 segmentation logic is untouched; the match search is not. In the same year
 somebody edited the decoder.

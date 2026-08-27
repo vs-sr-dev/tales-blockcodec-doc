@@ -1,10 +1,10 @@
 The same character models, packed twice.
 
-Eighteen files under the same names appear on the 2003 GameCube discs and
+Nineteen files under the same names appear on the 2003 GameCube discs and
 inside the 2004 PlayStation 2 build's TOSROOT volume.  For every one of them
 the codec census reports the *same number of blocks* and the *same total
-unpacked length* -- so the packer segmented identical input the same way both
-times -- and a different packed length.
+unpacked length* -- so the packer was handed identical input and segmented it
+the same way both times -- and a different packed length.
 
 That is the only direct measurement of the packer this corpus has.  Section 8
 of the specification says the tool itself has left no trace beyond its output;
@@ -19,6 +19,7 @@ KRATOS.BIN            6      6        51721      53321   +3.09%          94904
 KRATOS_EX.BIN         8      8        71651      73899   +3.14%         127872
 LLOYD.BIN             8      8        73762      75510   +2.37%         145008
 LLOYD_EX.BIN          8      8        68502      70141   +2.39%         120384
+MININI.BIN            2      2        16041      16877   +5.21%          37720
 PRESEA.BIN           10     10        44894      45217   +0.72%         130464
 PRESEA_EX.BIN         8      8        60920      62159   +2.03%         111888
 REFILL.BIN            6      6        38302      39110   +2.11%          74016
@@ -29,19 +30,22 @@ SHIHNA.BIN            6      6        24304      24569   +1.09%          53912
 SHIHNA_EX.BIN         8      8        62536      63920   +2.21%         111740
 ZELOSZ.BIN            6      6        25894      26207   +1.21%          57072
 ZELOSZ_EX.BIN         8      8        60220      61607   +2.30%         106624
-total (18 files)    132    132      1001069    1025520   +2.44%        1906392
+total (19 files)    134    134      1017110    1042397   +2.49%        1944112
 
-identical block count in every file : True
+identical block count in every file     : True
 identical unpacked length in every file : True
-every file packs LARGER in 2004 : True
-range of the increase : +0.72% to +3.88%
+every file packs LARGER in 2004         : True
+range of the increase                   : +0.72% to +5.21%
 
-Same input, same segmentation, 1906392 bytes of it, packed to 1001069 in 2003 and
-1025520 in 2004: the 2004 run is +2.44% larger.  The packer was still there
-in 2004 and it was not quite the same packer.
+Same input, same segmentation: 1944112 bytes of it, packed to 1017110 in 2003 and
+to 1042397 in 2004.  The 2004 run is +2.49% larger.  The packer was still
+there in 2004 and it was not quite the same packer.
 
 Not comparable -- same name, different data:
   BTLUSUAL.DAT     2003: 1 blocks, 130512 -> 265376   2004: 1 blocks, 61748 -> 135264
 
-Carrying blocks on one release only: ['BTLENEMY.DAT', 'MININI.BIN', 'NPC_ALL.BIN']
-(see reports/ps2-btlenemy-probe.txt for those, rescanned unbounded)
+Carrying blocks on the GameCube only: ['BTLENEMY.DAT', 'NPC_ALL.BIN']
+(BTLENEMY.DAT: rescanned at four-byte alignment across all 47.8 MB of the
+ 2004 file and contains no block at all.  NPC_ALL.BIN: the 2004 census
+ abandoned it on its decode budget, so it is unmeasured, not zero.
+ See reports/ps2-btlenemy-probe.txt.)

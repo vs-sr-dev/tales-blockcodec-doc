@@ -605,16 +605,16 @@ instead. See
   Section 6.
 * **~~What produced the blocks?~~** *Still invisible, but it has now been
   caught running twice.* *Tales of Symphonia* shipped on the GameCube in 2003
-  and on the PlayStation 2 in 2004, and eighteen character-model files carry
+  and on the PlayStation 2 in 2004, and nineteen character-model files carry
   codec blocks under the same name on both. For **every one of them** the block
   count and the total unpacked length are identical — so the packer was handed
   the same input and cut it at the same places — and **every one is larger in
-  2004**, by between +0.72% and +3.88%:
+  2004**, by between +0.72% and +5.21%:
 
   | | blocks | packed | unpacked |
   |---|---:|---:|---:|
-  | 2003, GameCube | 132 | 1,001,069 | 1,906,392 |
-  | 2004, PlayStation 2 | 132 | **1,025,520** | 1,906,392 |
+  | 2003, GameCube | 134 | 1,017,110 | 1,944,112 |
+  | 2004, PlayStation 2 | 134 | **1,042,397** | 1,944,112 |
 
   Not one file is smaller and not one is the same. The segmentation logic did
   not change between the two runs; the match search did, and it got worse. The
