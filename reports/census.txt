@@ -20,6 +20,27 @@ Tales of Destiny, PlayStation 1997 -- every block the index reaches
   6638 of 6638 decode to exactly their declared unpacked size
   full listing: ps1-talesofdestiny-doc/reports/verify.txt
 
+Tales of Eternia, PlayStation 2000 (disc 1) -- every block the index reaches
+  method 1 (lzss)             5805 blocks
+  method 3 (lzss + run)      14280 blocks
+  method 0 (stored)            969 blocks
+  total                      21054 blocks
+  packed                  204680311 bytes
+  unpacked                485931846 bytes  (2.37x)
+  21049 of 21054 decode to exactly their declared unpacked size; the other
+  five produce one byte too many and are enumerated in
+  ps1-talesofeternia-doc/docs/04-block-codec.md
+  full listing: ps1-talesofeternia-doc/reports/verify.txt
+
+  Preloaded-dictionary reads, over all 20085 compressed blocks:
+    (i, 0x00) pairs   0x0000-0x07FF     204808 reads  19.7%  1297 of 2048 addresses
+    (i, 0xFF) pairs   0x0800-0x0EFF      76819 reads   7.4%   704 of 1792 addresses
+    zeroed tail       0x0F00-cursor     757501 reads  72.9%    36 of  256 addresses
+    at or above the cursor                   0 reads
+  every block reads the preload at least once; none reads a byte the decoder
+  never initialised.
+  full listing: ps1-talesofeternia-doc/reports/preload-use.txt
+
 Tales of Phantasia, Game Boy Advance 2003 -- no blocks of this format.
   The 2003 rebuild uses the GBA BIOS LZ77UnComp / RLUnComp services
   instead.  The codec follows the team, not the series.

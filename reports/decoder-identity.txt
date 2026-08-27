@@ -1,0 +1,50 @@
+Decoder identity: Tales of Eternia (2000) against Tales of Destiny (1997)
+======================================================================
+
+-- method 1, the plain LZSS variant --
+A  SLPS_030.50   text at 0x80010000, routine at 0x80023504
+B  SLPS_011.00   text at 0x800A0000, routine at 0x80150BB0
+
+identical prefix: 53 words (212 bytes)
+  A 0x80023504 .. 0x800235D4
+  B 0x80150BB0 .. 0x80150C80
+
+first 12 differences after that:
+  +0x0D4   A 1040002B @ 0x800235D8     B 1040002F @ 0x80150C84
+  +0x0D8   A 000C6042 @ 0x800235DC     B 000C1042 @ 0x80150C88
+  +0x0DC   A 31820100 @ 0x800235E0     B 00406021 @ 0x80150C8C
+  +0x0E0   A 14400005 @ 0x800235E4     B 30420100 @ 0x80150C90
+  +0x0E4   A 31820001 @ 0x800235E8     B 14400005 @ 0x80150C94
+  +0x0E8   A 90A20000 @ 0x800235EC     B 31820001 @ 0x80150C98
+  +0x0EC   A 24A50001 @ 0x800235F0     B 90A20000 @ 0x80150C9C
+  +0x0F0   A 344CFF00 @ 0x800235F4     B 24A50001 @ 0x80150CA0
+  +0x0F4   A 31820001 @ 0x800235F8     B 344CFF00 @ 0x80150CA4
+  +0x0F8   A 10400009 @ 0x800235FC     B 31820001 @ 0x80150CA8
+  +0x0FC   A 00E91021 @ 0x80023600     B 10400009 @ 0x80150CAC
+  +0x100   A 90A30000 @ 0x80023604     B 00E91021 @ 0x80150CB0
+
+over the whole 140-word window: 69 identical, 71 differing (49%)
+
+-- method 3, the run-escape variant --
+A  SLPS_030.50   text at 0x80010000, routine at 0x80023690
+B  SLPS_011.00   text at 0x800A0000, routine at 0x80150D4C
+
+identical prefix: 50 words (200 bytes)
+  A 0x80023690 .. 0x80023754
+  B 0x80150D4C .. 0x80150E10
+
+first 12 differences after that:
+  +0x0C8   A 2449FFEF @ 0x80023758     B 244AFFEF @ 0x80150E14
+  +0x0CC   A 00006021 @ 0x8002375C     B 00006821 @ 0x80150E18
+  +0x0D4   A 10400043 @ 0x80023764     B 1040004B @ 0x80150E20
+  +0x0D8   A 000C6042 @ 0x80023768     B 000D1042 @ 0x80150E24
+  +0x0DC   A 31820100 @ 0x8002376C     B 00406821 @ 0x80150E28
+  +0x0E0   A 14400005 @ 0x80023770     B 30420100 @ 0x80150E2C
+  +0x0E4   A 31820001 @ 0x80023774     B 14400005 @ 0x80150E30
+  +0x0E8   A 90A20000 @ 0x80023778     B 31A20001 @ 0x80150E34
+  +0x0EC   A 24A50001 @ 0x8002377C     B 90A20000 @ 0x80150E38
+  +0x0F0   A 344CFF00 @ 0x80023780     B 24A50001 @ 0x80150E3C
+  +0x0F4   A 31820001 @ 0x80023784     B 344DFF00 @ 0x80150E40
+  +0x0F8   A 10400009 @ 0x80023788     B 31A20001 @ 0x80150E44
+
+over the whole 140-word window: 51 identical, 89 differing (36%)

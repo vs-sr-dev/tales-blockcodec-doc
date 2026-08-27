@@ -1,7 +1,8 @@
 # The Tales block codec
 
-The in-house LZSS that Wolf Team shipped on the Super Famicom in 1995 and that
-turned up again, essentially unchanged, on the PlayStation in 1997.
+The in-house LZSS that Wolf Team shipped on the Super Famicom in 1995, used
+again on the PlayStation in 1997, and was still shipping in 2000 — by then not
+merely the same format but, for 212 bytes, literally the same machine code.
 
 This document is the format. It is written to be read once in order and
 grepped afterwards, and it is deliberately title-agnostic: addresses, block
@@ -9,9 +10,12 @@ counts and per-game verification live in the title pipelines listed in the
 [README](README.md), not here.
 
 `tales_block.py` in this repository is the reference decoder. It implements
-everything below as one machine with a dialect switch, and reproduces both
+everything below as one machine with a dialect switch, and reproduces all three
 titles' own independently written decoders byte for byte
 ([`reports/cross-check.txt`](reports/cross-check.txt)).
+`decoder_diff.py` compares two shipped builds' copies of the routine
+instruction by instruction
+([`reports/decoder-identity.txt`](reports/decoder-identity.txt)).
 
 ---
 
@@ -186,8 +190,8 @@ variant can encode — the textbook LZSS `r = N − F`:
 | method 3 | 17 (the escape takes the top code) | 4079 | 17 |
 
 The bytes at and above the cursor are never initialised. A block that
-referenced them would decode differently on every call; across both titles no
-block does.
+referenced them would decode differently on every call; across all three titles
+no block does, and the 2000 corpus was instrumented to prove it — see below.
 
 ### What the preload buys
 
@@ -195,37 +199,110 @@ Measured on the two corpora, the ratio moves a long way:
 
 | | Blocks | Packed | Unpacked | Ratio |
 |---|---|---|---|---|
-| Super Famicom, no preload | 1,089 | 2,032,803 | 3,758,965 | **1.85×** |
-| PlayStation, preloaded | 6,638 | 148,665,346 | 464,839,924 | **3.13×** |
+| Super Famicom 1995, no preload | 1,089 | 2,032,803 | 3,758,965 | **1.85×** |
+| PlayStation 1997, preloaded | 6,638 | 148,665,346 | 464,839,924 | **3.13×** |
+| PlayStation 2000, preloaded | 21,054 | 204,680,311 | 485,931,846 | **2.37×** |
 
 That comparison is not clean — the data is different, the assets are bigger
 and more repetitive on a disc — so read it as an order of magnitude, not a
-measurement of the preload alone. But the preload is the only change to the
-dictionary between the two, and it is the change the team made.
+measurement of the preload alone. The 2000 disc makes that point sharply: it
+uses the identical dictionary and lands *below* the 1997 disc, because half its
+largest archive is the same eight images repeated and re-compressing an already
+compressed block gains nothing. Ratios measure corpora, not codecs.
+
+### What the packer actually reaches
+
+Ratios are indirect. *Tales of Eternia* is large enough to measure the
+question directly: decode every block while recording, for each of the 4,096
+ring addresses, whether it was read **before anything in that block had
+written to it** — a genuine read of the preload rather than of the block's own
+output. Over all 20,085 compressed blocks on its first disc:
+
+| Region | Range | Reads | Share | Distinct addresses used |
+|---|---|---:|---:|---|
+| `(i, 0x00)` pairs | `0x0000`–`0x07FF` | 204,808 | 19.7% | 1,297 of 2,048 |
+| `(i, 0xFF)` pairs | `0x0800`–`0x0EFF` | 76,819 | 7.4% | 704 of 1,792 |
+| zeroed tail, below the cursor | `0x0F00`–cursor | 757,501 | 72.9% | **36** of 256 |
+| at or above the cursor | cursor–`0x0FFF` | **0** | — | — |
+
+Three things fall out of that.
+
+**Every block reads the preload at least once.** Not one of the 20,085 is
+self-contained.
+
+**Three quarters of the traffic is the plain zeroed tail**, from 36 distinct
+addresses clustered immediately below the cursor. That is the packer emitting a
+short run of zeros at the head of a block, and it needs no synthetic table at
+all — only a ring that starts cleared. The single most valuable property of the
+dictionary is the `sb zero` loop, not the two pattern loops.
+
+**The synthetic halves are used, and unevenly.** Together they take 27% of the
+reads but spread over 2,001 distinct addresses, so the packer is genuinely
+matching against them rather than hitting one lucky offset. The `(i, 0x00)`
+half does about two and a half times the work of the `(i, 0xFF)` half.
+
+And a caveat that only shows up when you separate the corpus by content type:
+for **TIM images specifically**, deleting the entire `(i, 0xFF)` half changes
+nothing. A negative control over 707 image blocks decodes 658 of them to a
+structurally valid TIM with the correct preload and 658 with the `0xFF` half
+blanked — identical — while an empty ring decodes 113 and a cursor at zero
+decodes 566. Pixel data never happens to match the `0xFF` pattern; the tables
+and padded structures elsewhere in the corpus do.
+
+### Nothing reads what is not initialised
+
+The bytes at and above the write cursor are whatever the stack held. A block
+that referenced them would decode differently on every call, which would make
+the format non-deterministic in a way no length check could detect.
+
+Across *Tales of Eternia*'s 20,085 compressed blocks, **zero reads land at or
+above the cursor.** The same was true of the *Tales of Destiny* corpus. Two
+discs and 26,723 blocks later, the uninitialised window is still untouched.
 
 ---
 
 ## 5. The stored path
 
-Both dialects have one, and only the older one works.
+Every dialect has one, it was broken in 1997, and it was working again by 2000.
 
-**Super Famicom.** Any method byte that is not `$81` or `$83` falls through to
-a copy that takes its count from `+5` and its source from `+9`. It is used,
-rarely — three blocks on the 1995 cartridge, all payloads the packer could not
-shrink.
+**Super Famicom, 1995.** Any method byte that is not `$81` or `$83` falls
+through to a copy that takes its count from `+5` and its source from `+9`. It
+is used, rarely — three blocks on the cartridge, all payloads the packer could
+not shrink.
 
-**PlayStation.** Method `0` reaches a byte copy that is handed the **packed**
-size as its count and the pointer to the **block header** as its source,
-because the dispatcher never advances it past `+9`. It would emit the nine
-header bytes in front of the data.
+**PlayStation, 1997.** Method `0` reaches a byte copy that is handed the
+**packed** size as its count and the pointer to the **block header** as its
+source, because the dispatcher never advances it past `+9`. It would emit the
+nine header bytes in front of the data.
 
-It has never been exercised. Across 6,638 blocks on the 1997 disc, not one has
-method `0`. The path exists because the format it was ported from had one, and
-nothing tested the port because the packer had stopped emitting stored blocks.
+Nothing on that disc exercises it. Across 6,638 blocks, not one has method `0`.
+The path exists because the format it was ported from had one, and nothing
+tested the port because the packer had stopped emitting stored blocks.
+
+**PlayStation, 2000.** The pointer is right:
+
+```
+80023930  addu  a0, s1, zero        ; destination
+80023934  jal   0x80076E7C          ; memcpy
+80023938  addiu a1, s0, 9           ; source = block + 9   <-- past the header
+```
+
+and the path is live: **969 blocks** of the 21,054 on disc 1 of
+*Tales of Eternia* use method `0`. All of them sit in one archive, all at the
+same container slot, and all are tiny — 16, 24 or 28 bytes — which is the
+packer declining to spend a token stream on a payload that cannot shrink.
+
+The count is still taken from `+1`, the packed size, rather than from `+5`.
+For a stored block those are the same number, and on that disc they always are:
+`packed == unpacked` in all 969.
+
+So the discrepancy documented here for three years turns out to be a
+1997-build-specific defect, not a property of the format, and the format's own
+stored path works exactly as the Super Famicom one does.
 
 `tales_block.py` implements the sane reading — count from `+5`, source from
-`+9` — for both dialects, and documents the discrepancy rather than
-reproducing it.
+`+9` — for every dialect, which agrees with the 1995 and 2000 code and differs
+from the 1997 code only where the 1997 code is wrong.
 
 ---
 
@@ -235,8 +312,34 @@ reproducing it.
 |---|---|---|---|
 | Tales of Phantasia | Super Famicom | 1995 | **this format**, `$81` / `$83` |
 | Tales of Destiny | PlayStation | 1997 | **this format**, methods 1 / 3 |
+| Tales of Eternia | PlayStation | 2000 | **this format**, methods 0 / 1 / 3 — and the *same object code* |
 | Tales of Phantasia | Game Boy Advance | 2003 | **no** — GBA BIOS `LZ77UnComp` / `RLUnComp` |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
+
+### The 2000 build is not a reimplementation
+
+*Tales of Eternia* does not merely use this format; it contains the same
+compiled routine. Set its two decompressors beside *Tales of Destiny*'s:
+
+| Routine | Eternia, 2000 | Destiny, 1997 | Identical prefix |
+|---|---|---|---|
+| method 1 | `0x80023504` | `0x80150BB0` | **53 words / 212 bytes** |
+| method 3 | `0x80023690` | `0x80150D4C` | **50 words / 200 bytes** |
+
+That prefix is the whole of the dictionary setup — the zero loop, both
+256-iteration pattern loops, `RING − 18` and `RING − 17`. It contains no
+`lui`/`addiu` address pairs, so nothing in it could differ merely because the
+code was linked somewhere else; identical bytes there mean identical compiler
+output from identical source.
+
+After the prologue the two builds diverge in **register allocation only** —
+Destiny's method-3 routine holds its flag register in `t5` where Eternia's uses
+`t4`, and Destiny has one extra `addu` in the refill path. Over the whole
+140-word window, 49% of method 1 and 36% of method 3 still match word for word.
+
+Reproduce it with
+`python decoder_diff.py ETERNIA.EXE 0x80023504 DESTINY.EXE 0x80150BB0`
+([`reports/decoder-identity.txt`](reports/decoder-identity.txt)).
 
 The 2003 Game Boy Advance rebuild of *Phantasia* is the useful negative
 result. It is the same title, eight years later, and it uses the platform's
@@ -249,8 +352,9 @@ own packer.
 is the only thing it shares with the two above.
 
 So the current boundary of this format is: **Wolf Team's own titles, on
-platforms where they wrote the decompressor themselves.** Anything that
-narrows or widens that boundary is worth adding here.
+platforms where they wrote the decompressor themselves** — and inside that
+boundary the code did not evolve, it was recompiled. Anything that narrows or
+widens the boundary is worth adding here.
 
 ---
 
@@ -270,7 +374,9 @@ uses this format:
    one of them is real.
 3. **If the header shape is there but nothing decodes**, check the nibble
    order first — that is the one field the two known dialects disagree on, and
-   a third dialect would most plausibly differ there too.
+   a third dialect would most plausibly differ there too. (Three titles in,
+   there is still no third dialect: the 2000 PlayStation build uses the 1997
+   one unchanged.)
 4. **If it decodes but comes out short**, check the dictionary. Try the
    preload and the empty ring, and try both cursor starts. Lengths alone
    cannot distinguish these; decode a block that should be a known container
@@ -287,14 +393,27 @@ structure the platform recognises.
 
 ## 8. Open
 
-* **Is there a third dialect?** The two known ones differ in nibble order and
-  dictionary. A later Wolf Team title — *Tales of Eternia* on PlayStation, the
-  PlayStation 2 remakes — would either extend the table in section 6 or draw
-  the boundary more sharply.
+* **~~Is there a third dialect?~~** *Answered, no.* This question named
+  *Tales of Eternia* as the title that would settle it. It does: the 2000
+  PlayStation build has the same two dialects, the same nibble order, the same
+  preload and 212 bytes of the same object code. The remaining candidates are
+  the PlayStation 2 titles — *Tales of Destiny 2* (2002) and the *Destiny*
+  remake (2006) — and the 2005 PSP port of *Eternia*.
 * **What produced the blocks?** Everything here is about the decoders. The
   packer, which is where the shared constants actually live, has left no trace
-  in either shipped image beyond its output.
+  in any shipped image beyond its output. Three corpora now show its habits —
+  it emits stored blocks below roughly 30 bytes (2000 only), it never expands,
+  and on five blocks out of 21,054 it overshoots a trailing run by exactly one
+  byte — but the tool itself remains invisible.
 * **Why the nibble swap?** No functional reason has been found. It costs
   nothing either way and it is the sort of thing that changes when code is
   rewritten from a description rather than ported line by line — which, if
-  true, would say something about how the format travelled.
+  true, would say something about how the format travelled. The 2000 build
+  makes this *more* interesting, not less: between 1997 and 2000 the source
+  was clearly still on hand and still compiling, so whatever happened between
+  1995 and 1997 happened once and then stopped happening.
+* **Why does one packer setting differ per archive?** On the 2000 disc, two of
+  the four archives were packed with the run escape enabled and two with it
+  disabled, and six blocks out of 14,200 in one archive went the other way —
+  the texture pages of three consecutive maps. The dispatcher does not care,
+  so nothing ever forced the settings to agree.

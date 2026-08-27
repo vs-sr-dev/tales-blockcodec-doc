@@ -7,6 +7,14 @@ Cross-check: tales_block.py against each title pipeline's own decoder
 -- Super Famicom: tales_block.py vs snes-talesofphantasia-doc/tools/top_lzss.py --
    1089 blocks compared, 1089 byte-identical, 0 differing
 
+-- PlayStation: tales_block.py vs ps1-talesofeternia-doc/tools/verify.py --
+   20085 blocks compared, 20085 byte-identical, 0 differing
+
+   verify.py carries a second ring machine of its own, written to force a
+   wrong dictionary for the negative control.  Running it with the correct
+   dictionary makes it an independent decoder, and it agrees with
+   tales_block.py over the whole Tales of Eternia corpus.
+
 The two title pipelines were written independently: the Super Famicom one
 decodes against the output buffer, the PlayStation one against a ring.
 tales_block.py implements one ring machine for both and reproduces each.
