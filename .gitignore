@@ -1,0 +1,18 @@
+# Never commit anything derived from a game image.
+*.sfc
+*.smc
+*.gba
+*.bin
+*.cue
+*.iso
+*.img
+*.zip
+*.spc
+_work/
+out/
+
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+Thumbs.db

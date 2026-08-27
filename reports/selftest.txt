@@ -1,0 +1,10 @@
+  psx  run    -> b'ABCDEFGH'            ok
+  snes run    -> b'ABCDEFGH'            ok
+  psx  run    -> b'ZZZZ'                ok
+  snes run    -> b'ZZZZ'                ok
+  psx  run    -> b'wwwwwwwwwwwwwwwwwww' ok
+  snes run    -> b'wwwwwwwwwwwwwwwwwww' ok
+  psx  lzss   -> 19 bytes
+  short runs 4..18 agree across dialects
+  long runs 19..274 agree across dialects
+selftest passed

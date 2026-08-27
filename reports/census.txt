@@ -1,0 +1,26 @@
+Block census, per title, produced by tales_block.py
+======================================================================
+
+Tales of Phantasia, Super Famicom 1995 -- exhaustive scan of the 6 MiB image
+  method 0x81 (lzss)            115 blocks
+  method 0x83 (lzss + run)      974 blocks
+  total                        1089 blocks
+  packed                      2032803 bytes
+  unpacked                    3758965 bytes  (1.85x)
+  every block decodes to exactly its declared unpacked size
+  full listing: snes-talesofphantasia-doc/reports/snes-block-scan.txt
+
+Tales of Destiny, PlayStation 1997 -- every block the index reaches
+  method 1 (lzss)              157 blocks
+  method 3 (lzss + run)       6481 blocks
+  method 0 (stored)              0 blocks
+  total                       6638 blocks
+  packed                  148665346 bytes
+  unpacked                464839924 bytes  (3.13x)
+  6638 of 6638 decode to exactly their declared unpacked size
+  full listing: ps1-talesofdestiny-doc/reports/verify.txt
+
+Tales of Phantasia, Game Boy Advance 2003 -- no blocks of this format.
+  The 2003 rebuild uses the GBA BIOS LZ77UnComp / RLUnComp services
+  instead.  The codec follows the team, not the series.
+  see snes-talesofphantasia-doc/docs/10-gba-formats.md

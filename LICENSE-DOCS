@@ -1,0 +1,16 @@
+The documentation in this repository — README.md, tales-block-codec.md and
+everything under reports/ — is licensed under the Creative Commons Attribution
+4.0 International License (CC BY 4.0).
+
+    https://creativecommons.org/licenses/by/4.0/
+
+You are free to share and adapt the material for any purpose, including
+commercially, provided you give appropriate credit, link to the licence and
+indicate whether changes were made.
+
+tales_block.py is licensed separately, under the MIT License; see LICENSE.
+
+Tales of Phantasia and Tales of Destiny are trademarks of BANDAI NAMCO
+Entertainment Inc. This project is unaffiliated with and unendorsed by Bandai
+Namco, Wolf Team, Nintendo or Sony Interactive Entertainment. No copyrighted
+game data is reproduced here.
