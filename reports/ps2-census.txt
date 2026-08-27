@@ -1,0 +1,66 @@
+Tales of Destiny 2 (PlayStation 2, SLPS-25172, 2002)
+Full block census: top-level members of FILE.FPB, plus members nested
+inside its 461 SCPK bundles.  Decoded with tales_block.py unmodified,
+PSX dialect, no PlayStation 2 branch.
+===================================================================
+
+--- level 1: top-level members of FILE.FPB ---
+archive          iso/FILE.FPB (1516427072 bytes)
+members          9206
+block candidates 1327
+decoded exact    1327
+decoded short    0
+decoded over     0
+decoder raised   0
+methods          {0: 19, 1: 140, 3: 1168}
+packed bytes     105013330
+unpacked bytes   329747742
+ratio            3.140x
+
+--- level 2: members inside SCPK bundles ---
+bundles                 461
+bundle members          8603
+header (ver, kind, res) {(1, 7, 0): 461}
+member counts           {13: 1, 14: 81, 15: 117, 16: 51, 17: 35, 18: 34, 19: 18, 20: 15, 21: 20, 22: 7, 23: 12, 24: 9, 25: 7, 26: 5, 27: 7, 28: 5, 29: 5, 30: 4, 31: 1, 32: 4, 34: 1, 35: 2, 36: 2, 37: 3, 38: 2, 39: 5, 40: 1, 41: 1, 44: 2, 45: 1, 46: 2, 48: 1}
+
+compressed members      8142
+decoded to declared len 8142
+mismatched              0
+packed bytes            223996350
+unpacked bytes          1083211592
+ratio                   4.836x
+
+first four bytes after decoding, top 20:
+  4d434400           6662
+  4d444c40            558
+  4d464800            461
+  53434544            461
+  raw:0c00fa00        117
+  raw:0b00fa00         81
+  raw:0d00fa00         51
+  raw:0e00fa00         35
+  raw:0f00fa00         34
+  raw:1200fa00         20
+  raw:1000fa00         18
+  raw:1100fa00         15
+  raw:1400fa00         12
+  raw:1500fa00          9
+  raw:1600fa00          7
+  raw:1300fa00          7
+  raw:1800fa00          7
+  raw:1a00fa00          5
+  raw:2400fa00          5
+  raw:1900fa00          5
+
+===================================================================
+TOTAL
+  blocks found       9469
+  decoded exact      9469
+  short / over       0 / 0
+  packed bytes       329009680
+  unpacked bytes     1412959334
+  ratio              4.294x
+
+Reproduce with, from ps2-talesofdestiny2-doc:
+  python tools/verify.py iso/FILE.FPB --index iso/SLPS_251.72 --at 0x001DC314
+  python tools/scpk.py   iso/FILE.FPB --index iso/SLPS_251.72 --at 0x001DC314 --census

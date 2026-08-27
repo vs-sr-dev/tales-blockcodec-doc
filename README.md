@@ -2,12 +2,18 @@
 
 **The Tales block codec, documented once.** The in-house LZSS that Wolf Team
 shipped on the Super Famicom in 1995, used again on the PlayStation in 1997,
-and was still shipping in 2000 — by then not merely the same format but, for
-212 bytes, literally the same machine code.
+still shipping in 2000 — by then not merely the same format but, for 212
+bytes, literally the same machine code — and still shipping in 2002, on the
+PlayStation 2, on a disc that also proves it was never Namco's format at all.
 
 → **[tales-block-codec.md](tales-block-codec.md)** — the specification
 → **[tales_block.py](tales_block.py)** — the reference decoder, both dialects
 → **[decoder_diff.py](decoder_diff.py)** — compare two builds' copies of the routine
+
+For comparisons *across* instruction sets — where byte equality is impossible
+by construction — the opcode-sequence tool lives in the PlayStation 2
+pipeline, because it needs an ELF reader this repository has no other use for:
+[`ps2-talesofdestiny2-doc/tools/decoder_lineage.py`](https://github.com/vs-sr-dev/ps2-talesofdestiny2-doc/blob/main/tools/decoder_lineage.py).
 
 Each *Tales* title I document produces two things: a repository about that
 build, and whatever it taught me about formats that are not specific to it.
@@ -46,6 +52,43 @@ A compressor written from scratch for MIPS in 1997 does not choose 19 as the
 base of its long run length. It chooses 19 because the packer that produced
 the data was the same packer.
 
+## The result that carried it across a console generation
+
+*Tales of Destiny 2*, PlayStation 2, 2002, decoded by the reference decoder
+with **no PlayStation 2 branch added**: 9,469 blocks found, **9,469 exact**,
+329 MB → 1,413 MB. Same header, same method bytes, same nibble order, same
+3,840-byte preloaded ring, same `RING − 18` / `RING − 17` cursors.
+
+The decoder could not be the same *object* this time — the Emotion Engine is
+an R5900 — so the question became whether it was the same *source*. It is:
+
+| Pair | Identical words | Longest identical run | Opcode sequence |
+|---|---:|---:|---:|
+| Destiny 1997 ↔ Eternia 2000 *(control)* | 69 / 140 | **53 words / 212 bytes** | **95.7%** |
+| Destiny 1997 ↔ Destiny 2 2002 | 0 | 0 | 51.4% |
+| Eternia 2000 ↔ Destiny 2 2002 | 0 | 0 | 49.3% |
+
+Zero identical bytes, half the opcode sequence, and everything a compiler does
+not get to choose held constant: the immediate `4078`, the ring in `a3`, the
+256-iteration pattern fill unrolled by exactly eight. The control row
+reproduces this repository's own 212-byte result by a different method, which
+is what makes the zeros meaningful.
+[`reports/ps2-lineage.txt`](reports/ps2-lineage.txt),
+[`reports/ps2-census.txt`](reports/ps2-census.txt).
+
+## The result that showed whose format it was
+
+The same 2002 disc carries a second, unrelated game — a promotional build of
+Namco's *Venus & Braves*, which shipped eight months later. Across 933,840
+instruction words its executable contains **no `4078` immediate at all**, and
+its data is stored plain.
+
+Two teams. One disc. One console. One year. One of them used the compressor.
+
+Before this, the boundary was stated as "Wolf Team's own titles". It can now
+be stated more sharply: the format belonged to the ***Tales* codebase**, not
+to the company, not to the console, and not to the series name.
+
 ## The result that settled it
 
 *Tales of Eternia*, three years after *Destiny*, does not merely use the same
@@ -82,19 +125,23 @@ not one reads a byte the decoder never initialised. See section 4.
 
 And the boundary is as informative as the match: the **2003 Game Boy Advance
 rebuild of the same game does not use this format at all**, but the platform's
-stock BIOS `LZ77UnComp`. The codec followed the team, not the series.
+stock BIOS `LZ77UnComp`. The codec followed the codebase, not the series — as
+the *Venus & Braves* result above makes sharper still.
 
 ---
 
 ## Verification
 
 `tales_block.py` is one ring machine with a dialect switch. It was checked
-against all three title pipelines' own decoders, which were written
+against all four title pipelines' own decoders, which were written
 independently and work differently — the Super Famicom one addresses the output
-buffer, the PlayStation ones a ring.
+buffer, the PlayStation ones a ring — and on the 2002 PlayStation 2 disc it
+*is* the decoder, used with no modification at all.
 
 | Check | Result |
 |---|---|
+| 2002 PlayStation 2 corpus, unmodified reference decoder | **9,469 / 9,469** blocks exact, 329 MB → 1,413 MB, [`reports/ps2-census.txt`](reports/ps2-census.txt) |
+| 2002 decoder against 1997 and 2000, instruction by instruction | 0 identical words, ~50% opcode sequence; control reproduces 212 bytes, [`reports/ps2-lineage.txt`](reports/ps2-lineage.txt) |
 | Self-test, no image needed — the two dialects' run arithmetic | 4–18 and 19–274 **agree across dialects**, [`reports/selftest.txt`](reports/selftest.txt) |
 | Exhaustive scan of the 6 MiB Super Famicom image | **1,089 blocks**, 115 `$81` + 974 `$83`, every one decoding to its declared length |
 | Byte-for-byte against `top_lzss.py` | **1,089 / 1,089 identical** |
@@ -104,7 +151,9 @@ buffer, the PlayStation ones a ring.
 | 2000 PlayStation corpus, decoder substituted | **21,054** blocks, 204.7 MB → 485.9 MB; 21,049 exact and five that overrun by one byte, enumerated |
 | Preloaded-dictionary reads, 2000 corpus | 1,039,128 reads traced by ring address; **zero** at or above the cursor |
 
-Reports: [`reports/census.txt`](reports/census.txt),
+Reports: [`reports/ps2-census.txt`](reports/ps2-census.txt),
+[`reports/ps2-lineage.txt`](reports/ps2-lineage.txt),
+[`reports/census.txt`](reports/census.txt),
 [`reports/cross-check.txt`](reports/cross-check.txt),
 [`reports/decoder-identity.txt`](reports/decoder-identity.txt),
 [`reports/selftest.txt`](reports/selftest.txt).
@@ -147,6 +196,8 @@ Dependency-free Python 3, one file, no imports beyond `sys`.
 | Tales of Phantasia | Super Famicom | 1995 | **yes**, `$81` / `$83` | [snes-talesofphantasia-doc](https://github.com/vs-sr-dev/snes-talesofphantasia-doc) |
 | Tales of Destiny | PlayStation | 1997 | **yes**, methods 1 / 3 | [ps1-talesofdestiny-doc](https://github.com/vs-sr-dev/ps1-talesofdestiny-doc) |
 | Tales of Eternia | PlayStation | 2000 | **yes**, methods 0 / 1 / 3 — same object code | [ps1-talesofeternia-doc](https://github.com/vs-sr-dev/ps1-talesofeternia-doc) |
+| **Tales of Destiny 2** | **PlayStation 2** | **2002** | **yes**, methods 0 / 1 / 3 — same source, recompiled | [ps2-talesofdestiny2-doc](https://github.com/vs-sr-dev/ps2-talesofdestiny2-doc) |
+| Venus & Braves | PlayStation 2 | 2003 | no — no decoder, on the *Destiny 2* disc | [ps2-talesofdestiny2-doc](https://github.com/vs-sr-dev/ps2-talesofdestiny2-doc) |
 | Tales of Phantasia | Game Boy Advance | 2003 | no — GBA BIOS `LZ77UnComp` | [snes-talesofphantasia-doc](https://github.com/vs-sr-dev/snes-talesofphantasia-doc) |
 | Tales of Berseria | PC | 2017 | no — zlib inside the TL engine | [pc-talesofberseria-doc](https://github.com/vs-sr-dev/pc-talesofberseria-doc) |
 
@@ -154,16 +205,16 @@ Addresses, block counts and per-title verification live in those
 repositories. This one holds only what is true of the format regardless of
 which game you found it in.
 
-Three titles is a family. The boundary section 6 draws — *Wolf Team's own
-titles, on platforms where they wrote the decompressor themselves* — has now
-survived a test it named in advance, and inside that boundary the code turns
-out not to have evolved at all: it was recompiled.
+Four titles is a lineage. Section 6 named the PlayStation 2 in advance as the
+test that would either widen the boundary by a console generation or place the
+break at 2000/2002. **It widened.** The codec crossed to the PlayStation 2
+unchanged, and the same disc that proved it also supplied the negative control
+that says whose format it was.
 
-What is still untested is the PlayStation 2 era — *Tales of Destiny 2* (2002)
-and the *Destiny* remake (2006) — and the 2005 PSP port of *Eternia*. If the
-codec is there, the boundary widens by a console generation. If it is not, the
-break is 2000/2002 and the cause is probably the one that killed it on the Game
-Boy Advance: a platform that supplies its own decompression.
+What is still untested is the 2005 PSP port of *Eternia* and the 2006
+PlayStation 2 remake of *Destiny*. The remake is the interesting one: by then
+the studio had been renamed, and if the codec is still in it, it outlived the
+team's own identity.
 
 ---
 
@@ -171,6 +222,7 @@ Boy Advance: a platform that supplies its own decompression.
 
 Documentation: [CC BY 4.0](LICENSE-DOCS). `tales_block.py`: [MIT](LICENSE).
 
-*Tales of Phantasia*, *Tales of Destiny* and *Tales of Eternia* are trademarks
-of BANDAI NAMCO Entertainment. This project is unaffiliated with and unendorsed
-by Bandai Namco, Wolf Team, Nintendo or Sony Interactive Entertainment.
+*Tales of Phantasia*, *Tales of Destiny*, *Tales of Eternia*, *Tales of
+Destiny 2* and *Venus & Braves* are trademarks of BANDAI NAMCO Entertainment.
+This project is unaffiliated with and unendorsed by Bandai Namco, Namco Tales
+Studio, Wolf Team, Nintendo or Sony Interactive Entertainment.

@@ -1,0 +1,244 @@
+Reference control: Tales of Destiny (1997) vs Tales of Eternia (2000).
+Both PlayStation, both R3000A.  tales-blockcodec-doc reports 53 identical
+words / 212 bytes here; this tool reproduces that independently.
+===============================================================
+#      A                                            B                                            VERDICT
+0      0x80150BB0 addu     t0, zero, zero            0x80023504 addu     t0, zero, zero            identical
+1      0x80150BB4 addiu    v1, zero, 4078            0x80023508 addiu    v1, zero, 4078            identical
+2      0x80150BB8 addu     v0, a3, t0                0x8002350C addu     v0, a3, t0                identical
+3      0x80150BBC sb       zero, 0(v0)               0x80023510 sb       zero, 0(v0)               identical
+4      0x80150BC0 addiu    t0, t0, 1                 0x80023514 addiu    t0, t0, 1                 identical
+5      0x80150BC4 slt      v0, t0, v1                0x80023518 slt      v0, t0, v1                identical
+6      0x80150BC8 bne      v0, zero, 0x80150BBC      0x8002351C bne      v0, zero, 0x80023510      identical
+7      0x80150BCC addu     v0, a3, t0                0x80023520 addu     v0, a3, t0                identical
+8      0x80150BD0 addu     t0, zero, zero            0x80023524 addu     t0, zero, zero            identical
+9      0x80150BD4 addu     v1, a3, zero              0x80023528 addu     v1, a3, zero              identical
+10     0x80150BD8 sb       t0, 0(v1)                 0x8002352C sb       t0, 0(v1)                 identical
+11     0x80150BDC addiu    v1, v1, 1                 0x80023530 addiu    v1, v1, 1                 identical
+12     0x80150BE0 sb       zero, 0(v1)               0x80023534 sb       zero, 0(v1)               identical
+13     0x80150BE4 addiu    v1, v1, 1                 0x80023538 addiu    v1, v1, 1                 identical
+14     0x80150BE8 sb       t0, 0(v1)                 0x8002353C sb       t0, 0(v1)                 identical
+15     0x80150BEC addiu    v1, v1, 1                 0x80023540 addiu    v1, v1, 1                 identical
+16     0x80150BF0 sb       zero, 0(v1)               0x80023544 sb       zero, 0(v1)               identical
+17     0x80150BF4 addiu    v1, v1, 1                 0x80023548 addiu    v1, v1, 1                 identical
+18     0x80150BF8 sb       t0, 0(v1)                 0x8002354C sb       t0, 0(v1)                 identical
+19     0x80150BFC addiu    v1, v1, 1                 0x80023550 addiu    v1, v1, 1                 identical
+20     0x80150C00 sb       zero, 0(v1)               0x80023554 sb       zero, 0(v1)               identical
+21     0x80150C04 addiu    v1, v1, 1                 0x80023558 addiu    v1, v1, 1                 identical
+22     0x80150C08 sb       t0, 0(v1)                 0x8002355C sb       t0, 0(v1)                 identical
+23     0x80150C0C addiu    v1, v1, 1                 0x80023560 addiu    v1, v1, 1                 identical
+24     0x80150C10 sb       zero, 0(v1)               0x80023564 sb       zero, 0(v1)               identical
+25     0x80150C14 addiu    t0, t0, 1                 0x80023568 addiu    t0, t0, 1                 identical
+26     0x80150C18 slti     v0, t0, 256               0x8002356C slti     v0, t0, 256               identical
+27     0x80150C1C bne      v0, zero, 0x80150BD8      0x80023570 bne      v0, zero, 0x8002352C      identical
+28     0x80150C20 addiu    v1, v1, 1                 0x80023574 addiu    v1, v1, 1                 identical
+29     0x80150C24 addu     t0, zero, zero            0x80023578 addu     t0, zero, zero            identical
+30     0x80150C28 addiu    t1, zero, 255             0x8002357C addiu    t1, zero, 255             identical
+31     0x80150C2C addiu    v1, a3, 2048              0x80023580 addiu    v1, a3, 2048              identical
+32     0x80150C30 sb       t0, 0(v1)                 0x80023584 sb       t0, 0(v1)                 identical
+33     0x80150C34 addiu    v1, v1, 1                 0x80023588 addiu    v1, v1, 1                 identical
+34     0x80150C38 sb       t1, 0(v1)                 0x8002358C sb       t1, 0(v1)                 identical
+35     0x80150C3C addiu    v1, v1, 1                 0x80023590 addiu    v1, v1, 1                 identical
+36     0x80150C40 sb       t0, 0(v1)                 0x80023594 sb       t0, 0(v1)                 identical
+37     0x80150C44 addiu    v1, v1, 1                 0x80023598 addiu    v1, v1, 1                 identical
+38     0x80150C48 sb       t1, 0(v1)                 0x8002359C sb       t1, 0(v1)                 identical
+39     0x80150C4C addiu    v1, v1, 1                 0x800235A0 addiu    v1, v1, 1                 identical
+40     0x80150C50 sb       t0, 0(v1)                 0x800235A4 sb       t0, 0(v1)                 identical
+41     0x80150C54 addiu    v1, v1, 1                 0x800235A8 addiu    v1, v1, 1                 identical
+42     0x80150C58 sb       t1, 0(v1)                 0x800235AC sb       t1, 0(v1)                 identical
+43     0x80150C5C addiu    v1, v1, 1                 0x800235B0 addiu    v1, v1, 1                 identical
+44     0x80150C60 sb       t0, 0(v1)                 0x800235B4 sb       t0, 0(v1)                 identical
+45     0x80150C64 addiu    t0, t0, 1                 0x800235B8 addiu    t0, t0, 1                 identical
+46     0x80150C68 slti     v0, t0, 256               0x800235BC slti     v0, t0, 256               identical
+47     0x80150C6C bne      v0, zero, 0x80150C30      0x800235C0 bne      v0, zero, 0x80023584      identical
+
+A                ps1-destiny-1997/SLPS_011.00 @ 0x80150BB0
+B                ps1-eternia-2000/SLPS_030.50 @ 0x80023504
+words compared   140
+identical words  69 (49.3%)
+longest identical run 53 words / 212 bytes
+same opcode      77 (55.0%)
+opcode sequence  95.7% similar (ignoring registers and scheduling)
+
+===============================================================
+Tales of Destiny (1997, R3000A) vs Tales of Destiny 2 (2002, EE R5900)
+===============================================================
+#      A                                            B                                            VERDICT
+0      0x80150BB0 addu     t0, zero, zero            0x0010A1B0 daddu    t4, a0, zero              
+1      0x80150BB4 addiu    v1, zero, 4078            0x0010A1B4 daddu    t1, zero, zero            
+2      0x80150BB8 addu     v0, a3, t0                0x0010A1B8 sltu     t5, a1, a2                
+3      0x80150BBC sb       zero, 0(v0)               0x0010A1BC addiu    a0, zero, 4078            
+4      0x80150BC0 addiu    t0, t0, 1                 0x0010A1C0 addu     v1, a3, t1                
+5      0x80150BC4 slt      v0, t0, v1                0x0010A1C4 addiu    t1, t1, 1                 
+6      0x80150BC8 bne      v0, zero, 0x80150BBC      0x0010A1C8 sb       zero, 0(v1)               
+7      0x80150BCC addu     v0, a3, t0                0x0010A1CC slt      v0, t1, a0                
+8      0x80150BD0 addu     t0, zero, zero            0x0010A1D0 nop                                
+9      0x80150BD4 addu     v1, a3, zero              0x0010A1D4 bne      v0, zero, 0x0010A1C0      
+10     0x80150BD8 sb       t0, 0(v1)                 0x0010A1D8 nop                                
+11     0x80150BDC addiu    v1, v1, 1                 0x0010A1DC daddu    t2, zero, zero            
+12     0x80150BE0 sb       zero, 0(v1)               0x0010A1E0 daddu    t1, zero, zero            
+13     0x80150BE4 addiu    v1, v1, 1                 0x0010A1E4 addiu    t0, zero, 1               same opcode
+14     0x80150BE8 sb       t0, 0(v1)                 0x0010A1E8 addu     v0, a3, t2                
+15     0x80150BEC addiu    v1, v1, 1                 0x0010A1EC addu     v1, a3, t0                
+16     0x80150BF0 sb       zero, 0(v1)               0x0010A1F0 sb       t1, 0(v0)                 same opcode
+17     0x80150BF4 addiu    v1, v1, 1                 0x0010A1F4 addu     a0, t0, a3                
+18     0x80150BF8 sb       t0, 0(v1)                 0x0010A1F8 sb       zero, 0(v1)               same opcode
+19     0x80150BFC addiu    v1, v1, 1                 0x0010A1FC daddu    v0, a0, zero              
+20     0x80150C00 sb       zero, 0(v1)               0x0010A200 sb       t1, 1(a0)                 same opcode
+21     0x80150C04 addiu    v1, v1, 1                 0x0010A204 daddu    v1, v0, zero              
+22     0x80150C08 sb       t0, 0(v1)                 0x0010A208 sb       zero, 2(v0)               same opcode
+23     0x80150C0C addiu    v1, v1, 1                 0x0010A20C addiu    t0, t0, 8                 same opcode
+24     0x80150C10 sb       zero, 0(v1)               0x0010A210 sb       t1, 3(v1)                 same opcode
+25     0x80150C14 addiu    t0, t0, 1                 0x0010A214 addiu    t2, t2, 8                 same opcode
+26     0x80150C18 slti     v0, t0, 256               0x0010A218 sb       zero, 4(a0)               
+27     0x80150C1C bne      v0, zero, 0x80150BD8      0x0010A21C sb       t1, 5(v0)                 
+28     0x80150C20 addiu    v1, v1, 1                 0x0010A220 addiu    t1, t1, 1                 same opcode
+29     0x80150C24 addu     t0, zero, zero            0x0010A224 slti     v0, t1, 256               
+30     0x80150C28 addiu    t1, zero, 255             0x0010A228 bne      v0, zero, 0x0010A1E8      
+31     0x80150C2C addiu    v1, a3, 2048              0x0010A22C sb       zero, 6(v1)               
+32     0x80150C30 sb       t0, 0(v1)                 0x0010A230 daddu    t1, zero, zero            
+33     0x80150C34 addiu    v1, v1, 1                 0x0010A234 addiu    t3, zero, 255             same opcode
+34     0x80150C38 sb       t1, 0(v1)                 0x0010A238 addiu    t0, t2, 1                 
+35     0x80150C3C addiu    v1, v1, 1                 0x0010A23C nop                                
+36     0x80150C40 sb       t0, 0(v1)                 0x0010A240 addu     v0, a3, t2                
+37     0x80150C44 addiu    v1, v1, 1                 0x0010A244 addu     v1, a3, t0                
+38     0x80150C48 sb       t1, 0(v1)                 0x0010A248 sb       t1, 0(v0)                 same opcode
+39     0x80150C4C addiu    v1, v1, 1                 0x0010A24C addu     a0, t0, a3                
+40     0x80150C50 sb       t0, 0(v1)                 0x0010A250 sb       t3, 0(v1)                 same opcode
+41     0x80150C54 addiu    v1, v1, 1                 0x0010A254 daddu    v0, a0, zero              
+42     0x80150C58 sb       t1, 0(v1)                 0x0010A258 sb       t1, 1(a0)                 same opcode
+43     0x80150C5C addiu    v1, v1, 1                 0x0010A25C daddu    v1, v0, zero              
+44     0x80150C60 sb       t0, 0(v1)                 0x0010A260 sb       t3, 2(v0)                 same opcode
+45     0x80150C64 addiu    t0, t0, 1                 0x0010A264 addiu    t2, t2, 7                 same opcode
+46     0x80150C68 slti     v0, t0, 256               0x0010A268 sb       t1, 3(v1)                 
+47     0x80150C6C bne      v0, zero, 0x80150C30      0x0010A26C sb       t3, 4(a0)                 
+
+A                ps1-destiny-1997/SLPS_011.00 @ 0x80150BB0
+B                ps2-destiny2-2002/SLPS_251.72 @ 0x0010A1B0
+words compared   140
+identical words  0 (0.0%)
+longest identical run 0 words / 0 bytes
+same opcode      23 (16.4%)
+opcode sequence  51.4% similar (ignoring registers and scheduling)
+
+===============================================================
+Tales of Eternia (2000, R3000A) vs Tales of Destiny 2 (2002, EE R5900)
+===============================================================
+#      A                                            B                                            VERDICT
+0      0x80023504 addu     t0, zero, zero            0x0010A1B0 daddu    t4, a0, zero              
+1      0x80023508 addiu    v1, zero, 4078            0x0010A1B4 daddu    t1, zero, zero            
+2      0x8002350C addu     v0, a3, t0                0x0010A1B8 sltu     t5, a1, a2                
+3      0x80023510 sb       zero, 0(v0)               0x0010A1BC addiu    a0, zero, 4078            
+4      0x80023514 addiu    t0, t0, 1                 0x0010A1C0 addu     v1, a3, t1                
+5      0x80023518 slt      v0, t0, v1                0x0010A1C4 addiu    t1, t1, 1                 
+6      0x8002351C bne      v0, zero, 0x80023510      0x0010A1C8 sb       zero, 0(v1)               
+7      0x80023520 addu     v0, a3, t0                0x0010A1CC slt      v0, t1, a0                
+8      0x80023524 addu     t0, zero, zero            0x0010A1D0 nop                                
+9      0x80023528 addu     v1, a3, zero              0x0010A1D4 bne      v0, zero, 0x0010A1C0      
+10     0x8002352C sb       t0, 0(v1)                 0x0010A1D8 nop                                
+11     0x80023530 addiu    v1, v1, 1                 0x0010A1DC daddu    t2, zero, zero            
+12     0x80023534 sb       zero, 0(v1)               0x0010A1E0 daddu    t1, zero, zero            
+13     0x80023538 addiu    v1, v1, 1                 0x0010A1E4 addiu    t0, zero, 1               same opcode
+14     0x8002353C sb       t0, 0(v1)                 0x0010A1E8 addu     v0, a3, t2                
+15     0x80023540 addiu    v1, v1, 1                 0x0010A1EC addu     v1, a3, t0                
+16     0x80023544 sb       zero, 0(v1)               0x0010A1F0 sb       t1, 0(v0)                 same opcode
+17     0x80023548 addiu    v1, v1, 1                 0x0010A1F4 addu     a0, t0, a3                
+18     0x8002354C sb       t0, 0(v1)                 0x0010A1F8 sb       zero, 0(v1)               same opcode
+19     0x80023550 addiu    v1, v1, 1                 0x0010A1FC daddu    v0, a0, zero              
+20     0x80023554 sb       zero, 0(v1)               0x0010A200 sb       t1, 1(a0)                 same opcode
+21     0x80023558 addiu    v1, v1, 1                 0x0010A204 daddu    v1, v0, zero              
+22     0x8002355C sb       t0, 0(v1)                 0x0010A208 sb       zero, 2(v0)               same opcode
+23     0x80023560 addiu    v1, v1, 1                 0x0010A20C addiu    t0, t0, 8                 same opcode
+24     0x80023564 sb       zero, 0(v1)               0x0010A210 sb       t1, 3(v1)                 same opcode
+25     0x80023568 addiu    t0, t0, 1                 0x0010A214 addiu    t2, t2, 8                 same opcode
+26     0x8002356C slti     v0, t0, 256               0x0010A218 sb       zero, 4(a0)               
+27     0x80023570 bne      v0, zero, 0x8002352C      0x0010A21C sb       t1, 5(v0)                 
+28     0x80023574 addiu    v1, v1, 1                 0x0010A220 addiu    t1, t1, 1                 same opcode
+29     0x80023578 addu     t0, zero, zero            0x0010A224 slti     v0, t1, 256               
+30     0x8002357C addiu    t1, zero, 255             0x0010A228 bne      v0, zero, 0x0010A1E8      
+31     0x80023580 addiu    v1, a3, 2048              0x0010A22C sb       zero, 6(v1)               
+32     0x80023584 sb       t0, 0(v1)                 0x0010A230 daddu    t1, zero, zero            
+33     0x80023588 addiu    v1, v1, 1                 0x0010A234 addiu    t3, zero, 255             same opcode
+34     0x8002358C sb       t1, 0(v1)                 0x0010A238 addiu    t0, t2, 1                 
+35     0x80023590 addiu    v1, v1, 1                 0x0010A23C nop                                
+36     0x80023594 sb       t0, 0(v1)                 0x0010A240 addu     v0, a3, t2                
+37     0x80023598 addiu    v1, v1, 1                 0x0010A244 addu     v1, a3, t0                
+38     0x8002359C sb       t1, 0(v1)                 0x0010A248 sb       t1, 0(v0)                 same opcode
+39     0x800235A0 addiu    v1, v1, 1                 0x0010A24C addu     a0, t0, a3                
+40     0x800235A4 sb       t0, 0(v1)                 0x0010A250 sb       t3, 0(v1)                 same opcode
+41     0x800235A8 addiu    v1, v1, 1                 0x0010A254 daddu    v0, a0, zero              
+42     0x800235AC sb       t1, 0(v1)                 0x0010A258 sb       t1, 1(a0)                 same opcode
+43     0x800235B0 addiu    v1, v1, 1                 0x0010A25C daddu    v1, v0, zero              
+44     0x800235B4 sb       t0, 0(v1)                 0x0010A260 sb       t3, 2(v0)                 same opcode
+45     0x800235B8 addiu    t0, t0, 1                 0x0010A264 addiu    t2, t2, 7                 same opcode
+46     0x800235BC slti     v0, t0, 256               0x0010A268 sb       t1, 3(v1)                 
+47     0x800235C0 bne      v0, zero, 0x80023584      0x0010A26C sb       t3, 4(a0)                 
+
+A                ps1-eternia-2000/SLPS_030.50 @ 0x80023504
+B                ps2-destiny2-2002/SLPS_251.72 @ 0x0010A1B0
+words compared   140
+identical words  0 (0.0%)
+longest identical run 0 words / 0 bytes
+same opcode      19 (13.6%)
+opcode sequence  49.3% similar (ignoring registers and scheduling)
+
+===============================================================
+Tales of Destiny 2's own two copies: EE against the IOP FILESYSTEM module
+===============================================================
+#      A                                            B                                            VERDICT
+0      0x0010A1B0 daddu    t4, a0, zero              0x00004904 sb       a0, 0(v0)                 
+1      0x0010A1B4 daddu    t1, zero, zero            0x00004908 lui      v0, 0x0000                
+2      0x0010A1B8 sltu     t5, a1, a2                0x0000490C lw       v0, 31860(v0)             
+3      0x0010A1BC addiu    a0, zero, 4078            0x00004910 addiu    v1, v1, 1                 same opcode
+4      0x0010A1C0 addu     v1, a3, t1                0x00004914 addu     v0, v0, v1                same opcode
+5      0x0010A1C4 addiu    t1, t1, 1                 0x00004918 sb       zero, 0(v0)               
+6      0x0010A1C8 sb       zero, 0(v1)               0x0000491C lui      v0, 0x0000                
+7      0x0010A1CC slt      v0, t1, a0                0x00004920 lw       v0, 31860(v0)             
+8      0x0010A1D0 nop                                0x00004924 addiu    v1, v1, 1                 
+9      0x0010A1D4 bne      v0, zero, 0x0010A1C0      0x00004928 addu     v0, v0, v1                
+10     0x0010A1D8 nop                                0x0000492C sb       a0, 0(v0)                 
+11     0x0010A1DC daddu    t2, zero, zero            0x00004930 lui      v0, 0x0000                
+12     0x0010A1E0 daddu    t1, zero, zero            0x00004934 lw       v0, 31860(v0)             
+13     0x0010A1E4 addiu    t0, zero, 1               0x00004938 addiu    v1, v1, 1                 same opcode
+14     0x0010A1E8 addu     v0, a3, t2                0x0000493C addu     v0, v0, v1                same opcode
+15     0x0010A1EC addu     v1, a3, t0                0x00004940 sb       zero, 0(v0)               
+16     0x0010A1F0 sb       t1, 0(v0)                 0x00004944 lui      v0, 0x0000                
+17     0x0010A1F4 addu     a0, t0, a3                0x00004948 lw       v0, 31860(v0)             
+18     0x0010A1F8 sb       zero, 0(v1)               0x0000494C addiu    v1, v1, 1                 
+19     0x0010A1FC daddu    v0, a0, zero              0x00004950 addu     v0, v0, v1                
+20     0x0010A200 sb       t1, 1(a0)                 0x00004954 addiu    v1, v1, 1                 
+21     0x0010A204 daddu    v1, v0, zero              0x00004958 sb       a0, 0(v0)                 
+22     0x0010A208 sb       zero, 2(v0)               0x0000495C lui      v0, 0x0000                
+23     0x0010A20C addiu    t0, t0, 8                 0x00004960 lw       v0, 31860(v0)             
+24     0x0010A210 sb       t1, 3(v1)                 0x00004964 addiu    a0, a0, 1                 
+25     0x0010A214 addiu    t2, t2, 8                 0x00004968 addu     v0, v0, v1                
+26     0x0010A218 sb       zero, 4(a0)               0x0000496C sb       zero, 0(v0)               same opcode
+27     0x0010A21C sb       t1, 5(v0)                 0x00004970 slti     v0, a0, 256               
+28     0x0010A220 addiu    t1, t1, 1                 0x00004974 bne      v0, zero, 0x000048CC      
+29     0x0010A224 slti     v0, t1, 256               0x00004978 addiu    v1, v1, 1                 
+30     0x0010A228 bne      v0, zero, 0x0010A1E8      0x0000497C addu     a0, zero, zero            
+31     0x0010A22C sb       zero, 6(v1)               0x00004980 addiu    a1, zero, 255             
+32     0x0010A230 daddu    t1, zero, zero            0x00004984 lui      v0, 0x0000                
+33     0x0010A234 addiu    t3, zero, 255             0x00004988 lw       v0, 31860(v0)             
+34     0x0010A238 addiu    t0, t2, 1                 0x0000498C nop                                
+35     0x0010A23C nop                                0x00004990 addu     v0, v0, v1                
+36     0x0010A240 addu     v0, a3, t2                0x00004994 sb       a0, 0(v0)                 
+37     0x0010A244 addu     v1, a3, t0                0x00004998 lui      v0, 0x0000                
+38     0x0010A248 sb       t1, 0(v0)                 0x0000499C lw       v0, 31860(v0)             
+39     0x0010A24C addu     a0, t0, a3                0x000049A0 addiu    v1, v1, 1                 
+40     0x0010A250 sb       t3, 0(v1)                 0x000049A4 addu     v0, v0, v1                
+41     0x0010A254 daddu    v0, a0, zero              0x000049A8 sb       a1, 0(v0)                 
+42     0x0010A258 sb       t1, 1(a0)                 0x000049AC lui      v0, 0x0000                
+43     0x0010A25C daddu    v1, v0, zero              0x000049B0 lw       v0, 31860(v0)             
+44     0x0010A260 sb       t3, 2(v0)                 0x000049B4 addiu    v1, v1, 1                 
+45     0x0010A264 addiu    t2, t2, 7                 0x000049B8 addu     v0, v0, v1                
+46     0x0010A268 sb       t1, 3(v1)                 0x000049BC sb       a0, 0(v0)                 same opcode
+47     0x0010A26C sb       t3, 4(a0)                 0x000049C0 lui      v0, 0x0000                
+
+A                ps2-destiny2-2002/SLPS_251.72 @ 0x0010A1B0
+B                ps2-destiny2-2002/FILESYS.IRX @ 0x00004904
+words compared   140
+identical words  1 (0.7%)
+longest identical run 1 words / 4 bytes
+same opcode      9 (6.4%)
+opcode sequence  24.3% similar (ignoring registers and scheduling)

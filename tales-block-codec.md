@@ -1,8 +1,9 @@
 # The Tales block codec
 
 The in-house LZSS that Wolf Team shipped on the Super Famicom in 1995, used
-again on the PlayStation in 1997, and was still shipping in 2000 — by then not
-merely the same format but, for 212 bytes, literally the same machine code.
+again on the PlayStation in 1997, still shipping in 2000 — by then not merely
+the same format but, for 212 bytes, literally the same machine code — and
+still shipping in 2002, on the PlayStation 2, unchanged.
 
 This document is the format. It is written to be read once in order and
 grepped afterwards, and it is deliberately title-agnostic: addresses, block
@@ -10,7 +11,7 @@ counts and per-game verification live in the title pipelines listed in the
 [README](README.md), not here.
 
 `tales_block.py` in this repository is the reference decoder. It implements
-everything below as one machine with a dialect switch, and reproduces all three
+everything below as one machine with a dialect switch, and reproduces all four
 titles' own independently written decoders byte for byte
 ([`reports/cross-check.txt`](reports/cross-check.txt)).
 `decoder_diff.py` compares two shipped builds' copies of the routine
@@ -313,6 +314,8 @@ from the 1997 code only where the 1997 code is wrong.
 | Tales of Phantasia | Super Famicom | 1995 | **this format**, `$81` / `$83` |
 | Tales of Destiny | PlayStation | 1997 | **this format**, methods 1 / 3 |
 | Tales of Eternia | PlayStation | 2000 | **this format**, methods 0 / 1 / 3 — and the *same object code* |
+| **Tales of Destiny 2** | **PlayStation 2** | **2002** | **this format**, methods 0 / 1 / 3 — the *same source*, recompiled |
+| Venus & Braves | PlayStation 2 | 2003 | **no** — no decoder, on the same disc as Destiny 2 |
 | Tales of Phantasia | Game Boy Advance | 2003 | **no** — GBA BIOS `LZ77UnComp` / `RLUnComp` |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
 
@@ -341,6 +344,62 @@ Reproduce it with
 `python decoder_diff.py ETERNIA.EXE 0x80023504 DESTINY.EXE 0x80150BB0`
 ([`reports/decoder-identity.txt`](reports/decoder-identity.txt)).
 
+### The 2002 build is not the same object, and could not be
+
+*Tales of Destiny 2* carries the format onto the PlayStation 2 with nothing
+changed: same header, same method bytes, same nibble order, same preloaded
+ring, same `RING − 18` / `RING − 17` cursors, and **9,469 of 9,469 blocks**
+decode to their declared lengths under `tales_block.py` with no new dialect
+([`reports/ps2-census.txt`](reports/ps2-census.txt)).
+
+Byte equality was not available this time. The Emotion Engine is an R5900 and
+its compiler is not the R3000A's, so the question has to change from *is it
+the same object* to *is it the same source*. Comparing 140 words from each
+build's method-1 routine:
+
+| Pair | Identical words | Longest identical run | Opcode sequence |
+|---|---:|---:|---:|
+| Destiny 1997 ↔ Eternia 2000 | 69 / 140 | **53 words / 212 bytes** | **95.7%** |
+| Destiny 1997 ↔ Destiny 2 2002 | 0 | 0 | 51.4% |
+| Eternia 2000 ↔ Destiny 2 2002 | 0 | 0 | 49.3% |
+
+The first row is the control: it reproduces this document's own headline
+number by a different method, so the zeros below it are a measurement rather
+than a failure of the tooling.
+
+What survived is everything a compiler does not choose. The 2002 routine loads
+`4078` as an immediate, takes the ring base in `a3`, and unrolls the
+256-iteration pattern fill by exactly eight stores — all three the same as
+1997 and 2000. What differs is register allocation, scheduling, and the R5900
+compiler's habit of emitting `daddu` for a move where the R3000A compiler
+emits `addu`. That is a recompile.
+
+The 2002 disc also carries a **second** copy, in the `FILESYSTEM` I/O
+processor module. The IOP is an R3000A, so byte equality *was* available
+there — and it did not happen either: 1 identical word in 140, 30.0% opcode
+similarity with the PlayStation builds. `FILESYS.IRX` is a relocatable module,
+so the ring base is a global reloaded on every store rather than held in a
+register, and the routine dispatches on internal kinds 2 and 4 rather than the
+on-disc method bytes 1 and 3. The same algorithm, compiled twice more, under
+two different sets of constraints.
+
+[`reports/ps2-lineage.txt`](reports/ps2-lineage.txt).
+
+### The boundary tested on a single disc
+
+The *Tales of Destiny 2* disc is the sharpest negative control this
+document has. It carries a second, unrelated game: a promo build of Namco's
+*Venus & Braves*, same company, same console, released eight months later.
+
+Across 933,840 instruction words `VENUS.ELF` has **no `4078` immediate at
+all**, and its single `4079` is a page-rounding constant in an allocator. No
+zero loop, no ×8 pattern fill, no decoder — and its data needs none, being a
+virtual CD image of plain stored members.
+
+Two teams, one disc, one console, one year, and only one of them used the
+compressor. The format did not belong to the company or to the platform. It
+belonged to the *Tales* codebase.
+
 The 2003 Game Boy Advance rebuild of *Phantasia* is the useful negative
 result. It is the same title, eight years later, and it uses the platform's
 stock BIOS decompression services throughout — the format did not travel with
@@ -351,10 +410,14 @@ own packer.
 2013-era middleware stack, zlib, and an obfuscated container. The series name
 is the only thing it shares with the two above.
 
-So the current boundary of this format is: **Wolf Team's own titles, on
-platforms where they wrote the decompressor themselves** — and inside that
-boundary the code did not evolve, it was recompiled. Anything that narrows or
-widens the boundary is worth adding here.
+So the current boundary of this format is: **the *Tales* codebase itself**,
+for as long as that codebase carried its own decompressor — and inside that
+boundary the code did not evolve. From 1997 to 2000 it was recompiled to the
+same bytes; from 2000 to 2002 it was recompiled to a different CPU. The
+boundary is not the company (Namco shipped *Venus & Braves* without it), not
+the console (both PlayStation 2 games are on one disc), and not the series
+name (*Berseria* shares only that). Anything that narrows or widens it is
+worth adding here.
 
 ---
 
@@ -374,9 +437,9 @@ uses this format:
    one of them is real.
 3. **If the header shape is there but nothing decodes**, check the nibble
    order first — that is the one field the two known dialects disagree on, and
-   a third dialect would most plausibly differ there too. (Three titles in,
-   there is still no third dialect: the 2000 PlayStation build uses the 1997
-   one unchanged.)
+   a third dialect would most plausibly differ there too. (Four titles in,
+   there is still no third dialect: the 2000 PlayStation build and the 2002
+   PlayStation 2 build both use the 1997 one unchanged.)
 4. **If it decodes but comes out short**, check the dictionary. Try the
    preload and the empty ring, and try both cursor starts. Lengths alone
    cannot distinguish these; decode a block that should be a known container
@@ -389,31 +452,62 @@ decoder with a garbage ring sails through a length check. The only test that
 works is a semantic one: decode, and ask whether the result is still a
 structure the platform recognises.
 
+### Finding the decoder, rather than the data
+
+There is a shortcut worth knowing, and it worked first try on the PlayStation
+2. **Scan the executable for the immediates 4078 and 4079.** They are
+`RING − 18` and `RING − 17`, they appear as `addiu`/`slti` immediates in every
+PlayStation-dialect decoder found so far, and no other part of a game has a
+reason to load 4,078. On *Tales of Destiny 2* that filter returned seven sites
+across two files and both decoders were within a hundred bytes of one of them.
+
+It cuts the other way just as well. The absence of `4078` across a whole
+executable is strong evidence the decoder is not there, which is how *Venus &
+Braves* was ruled out without decoding anything.
+
 ---
 
 ## 8. Open
 
-* **~~Is there a third dialect?~~** *Answered, no.* This question named
-  *Tales of Eternia* as the title that would settle it. It does: the 2000
-  PlayStation build has the same two dialects, the same nibble order, the same
-  preload and 212 bytes of the same object code. The remaining candidates are
-  the PlayStation 2 titles — *Tales of Destiny 2* (2002) and the *Destiny*
-  remake (2006) — and the 2005 PSP port of *Eternia*.
+* **~~Is there a third dialect?~~** *Answered, no — twice.* The question first
+  named *Tales of Eternia* as the title that would settle it, and the 2000
+  build turned out to share 212 bytes of object code with 1997. It then named
+  the PlayStation 2 as the remaining risk, and *Tales of Destiny 2* (2002)
+  settles that too: same two dialects, same nibble order, same preload, 9,469
+  of 9,469 blocks decoding under the unmodified reference decoder. Two
+  dialects, four titles, three consoles, seven years, and the split is still
+  1995/1997. What is left to test is the 2005 PSP port of *Eternia* and the
+  2006 PlayStation 2 remake of *Destiny*.
 * **What produced the blocks?** Everything here is about the decoders. The
   packer, which is where the shared constants actually live, has left no trace
-  in any shipped image beyond its output. Three corpora now show its habits —
+  in any shipped image beyond its output. Four corpora now show its habits —
   it emits stored blocks below roughly 30 bytes (2000 only), it never expands,
   and on five blocks out of 21,054 it overshoots a trailing run by exactly one
-  byte — but the tool itself remains invisible.
+  byte — but the tool itself remains invisible. The 2002 disc adds one habit
+  and removes another: the run escape is now overwhelmingly the default
+  (8,040 of 8,142 blocks inside its bundles are method 3), and tiny members
+  are no longer wrapped in a method-0 header at all — they are simply left raw
+  with no header, which the 2000 packer never did.
 * **Why the nibble swap?** No functional reason has been found. It costs
   nothing either way and it is the sort of thing that changes when code is
   rewritten from a description rather than ported line by line — which, if
   true, would say something about how the format travelled. The 2000 build
   makes this *more* interesting, not less: between 1997 and 2000 the source
   was clearly still on hand and still compiling, so whatever happened between
-  1995 and 1997 happened once and then stopped happening.
+  1995 and 1997 happened once and then stopped happening. 2002 extends that
+  by another two years and another CPU — the source was still on hand, still
+  compiling, and still nobody touched the nibble order.
 * **Why does one packer setting differ per archive?** On the 2000 disc, two of
   the four archives were packed with the run escape enabled and two with it
   disabled, and six blocks out of 14,200 in one archive went the other way —
   the texture pages of three consecutive maps. The dispatcher does not care,
-  so nothing ever forced the settings to agree.
+  so nothing ever forced the settings to agree. The 2002 disc does the same
+  thing within a *single* archive: method 0 is 19 of 1,327 top-level members
+  of `FILE.FPB` but only 2 of the 8,142 members nested inside its bundles.
+* **Two copies on one disc, compiled differently.** *Tales of Destiny 2* ships
+  the decoder twice, once per CPU, and the I/O processor copy shares almost
+  nothing with the Emotion Engine copy even at the opcode level (24.3%). It
+  also renumbers the methods internally, dispatching on 2 and 4 instead of 1
+  and 3 — the only place in four titles where the on-disc method byte is not
+  used directly. Whether that is a second hand-port or the same source under
+  a different build configuration is unresolved.
