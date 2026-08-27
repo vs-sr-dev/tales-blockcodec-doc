@@ -603,7 +603,27 @@ instead. See
   alignment between the two decoders is **six bytes**, against 212 for the
   1997/2000 pair. Some of that is a change of compiler; the constant is not.
   Section 6.
-* **What produced the blocks?** Everything here is about the decoders. The
+* **~~What produced the blocks?~~** *Still invisible, but it has now been
+  caught running twice.* *Tales of Symphonia* shipped on the GameCube in 2003
+  and on the PlayStation 2 in 2004, and eighteen character-model files carry
+  codec blocks under the same name on both. For **every one of them** the block
+  count and the total unpacked length are identical — so the packer was handed
+  the same input and cut it at the same places — and **every one is larger in
+  2004**, by between +0.72% and +3.88%:
+
+  | | blocks | packed | unpacked |
+  |---|---:|---:|---:|
+  | 2003, GameCube | 132 | 1,001,069 | 1,906,392 |
+  | 2004, PlayStation 2 | 132 | **1,025,520** | 1,906,392 |
+
+  Not one file is smaller and not one is the same. The segmentation logic did
+  not change between the two runs; the match search did, and it got worse. The
+  tool was still on hand in 2004, still being run, and no longer quite the same
+  tool — in the same year somebody edited the decoder. See
+  [gc-talesofsymphonia-doc](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc)
+  and [`reports/repack.txt`](reports/repack.txt).
+
+* **What produced the blocks?** Everything else here is about the decoders. The
   packer, which is where the shared constants actually live, has left no trace
   in any shipped image beyond its output. Four corpora now show its habits —
   it emits stored blocks below roughly 30 bytes (2000 only), it never expands,
