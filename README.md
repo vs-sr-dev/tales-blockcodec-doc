@@ -25,7 +25,11 @@ which prints its controls unconditionally so the failure is visible. The tool
 that *does* generalise is the constant scan: `4078` and `4079` are the packer's,
 and they survive PowerPC, where
 [`ring_sites.py`](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc/blob/main/tools/ring_sites.py)
-finds them.
+finds them. It does **not** survive a change of *machine*: on a JVM target
+there are no wide immediate fields and a constant may be a `CONSTANT_Integer`,
+a `sipush` operand, or computed and never present at all, so the scan has to
+become a parse. Section 7 carries that variant, and the parser it needs is
+[`classfile.py`](https://github.com/vs-sr-dev/keitai-talesoftactics-doc/blob/main/tools/classfile.py).
 
 Each *Tales* title I document produces two things: a repository about that
 build, and whatever it taught me about formats that are not specific to it.
@@ -320,6 +324,7 @@ Dependency-free Python 3, one file, no imports beyond `sys`.
 | **Tales of Symphonia** | **GameCube** | **2003** | **yes**, methods 1 / 3 — **on PowerPC**, header still little-endian | [gc-talesofsymphonia-doc](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc) |
 | **Tales of Symphonia** | **PlayStation 2** | **2004** | **yes** — same source, **edited** | [gc-talesofsymphonia-doc](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc) |
 | **Tales of Rebirth** | **PlayStation 2** | **2004** | **yes**, methods 1 / 3 — a **different source**, on both CPUs | [ps2-talesofrebirth-doc](https://github.com/vs-sr-dev/ps2-talesofrebirth-doc) |
+| **Tales of Tactics** | **i-appli (DoJa)** | **2004** | **no** — a Java application; deflate twice, both the platform's | [keitai-talesoftactics-doc](https://github.com/vs-sr-dev/keitai-talesoftactics-doc) |
 | Tales of Phantasia | Game Boy Advance | 2003 | no — GBA BIOS `LZ77UnComp` | [snes-talesofphantasia-doc](https://github.com/vs-sr-dev/snes-talesofphantasia-doc) |
 | Tales of Berseria | PC | 2017 | no — zlib inside the TL engine | [pc-talesofberseria-doc](https://github.com/vs-sr-dev/pc-talesofberseria-doc) |
 
@@ -338,6 +343,17 @@ survives a new machine — it has survived four, both byte orders and nine years
 but whether it survives the *code* being forked. *Tales of Rebirth* is the first
 build that answers that, and it does: the decoder is demonstrably not the same
 source as any neighbour's, and the format is bit-identical anyway.
+
+And the eighth build asks the last version of the question: not whether the
+format survives a new machine or a forked source, but where it stops. *Tales of
+Tactics* is a *Tales* title built the day *Tales of Rebirth* was released, by
+the same publisher, that names the leads of five titles which use the format —
+and contains no trace of it across 971,959 bytes and 6,286 integer constants,
+because it is a Java application and had nothing to inherit. The boundary is the
+console C codebase, and it is a boundary of inheritance rather than of choice.
+That build also forced the first real revision of the section 7 checklist: the
+`4078` constant scan cannot run on a virtual machine at all, and section 7 now
+carries the variant that can.
 
 What is still untested is the 2005 PSP port of *Eternia* and the 2006
 PlayStation 2 remake of *Destiny*. The remake is the interesting one: by then

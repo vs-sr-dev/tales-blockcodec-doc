@@ -320,6 +320,7 @@ from the 1997 code only where the 1997 code is wrong.
 | **Tales of Symphonia** | **GameCube** | **2003** | **this format**, methods 1 / 3 — on a *big-endian* machine |
 | **Tales of Symphonia** | **PlayStation 2** | **2004** | **this format** — the same source, *edited* |
 | **Tales of Rebirth** | **PlayStation 2** | **2004** | **this format**, methods 1 / 3 — a *different* source again, on both CPUs |
+| **Tales of Tactics** | **i-appli (DoJa)** | **2004** | **no** — a Java application; deflate, twice, both the platform's |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
 
 ### The 2000 build is not a reimplementation
@@ -583,6 +584,50 @@ own packer.
 2013-era middleware stack, zlib, and an obfuscated container. The series name
 is the only thing it shares with the two above.
 
+### The boundary tested off the console entirely
+
+*Tales of Tactics* is the first title here that is not a console game: an NTT
+DoCoMo i-appli, DoJa-3.0, built **16 December 2004** — the day *Tales of
+Rebirth* was released. It is a Java application, so the question changes shape
+before it can even be asked, and the answer is a clean negative with a large
+measurement behind it.
+
+| | class files | bytecode | instructions | integer constants | `4078` | `4079` |
+|---|---:|---:|---:|---:|---:|---:|
+| *Tales of Tactics* | 3 | 132,205 | 76,283 | 6,286 | **0** | **0** |
+| three sibling i-appli, as control | 8 | 358,949 | 185,526 | 31,650 | **0** | **0** |
+| **combined** | **11** | **491,154** | **261,809** | **37,936** | **0** | **0** |
+
+`0xFF00` and `0x0FFF` are absent too, no 4,096-element ring is allocated, and
+no structural fingerprint of the format — nibble-pair token, control-register
+refill, `+3` / `+19` run escape — appears anywhere. The unmodified reference
+decoder was then handed **35 payloads and 971,959 bytes** of that package in
+both dialects, and **2,470,639 bytes** across the four titles, and returned
+**zero blocks**.
+
+What is there instead is **deflate, twice, and the application wrote neither
+layer**: the JAR itself, and then each downloaded data file served as its own
+single-entry JAR and inflated on the device by the platform's
+`com.nttdocomo.util.JarInflater`. There is no application-layer codec at all.
+
+This is a different kind of negative from the two already here. The 2003 Game
+Boy Advance rebuild said the format travelled with the team and not the title;
+*Venus & Braves* said it belonged to the *Tales* codebase and not to the
+company or the console. This one says that **the codebase itself was the
+boundary all along**, because a title built in the same month by the same
+publisher, on a machine with no C and no console runtime, had nothing to
+inherit. Nothing was dropped. There was nothing to drop.
+
+Two details make it a sharper control than it might have been. First, the
+studio's crossover roster in that build names the male and female lead of
+*Phantasia* 1995, *Destiny* 1997, *Eternia* 2000, *Destiny 2* 2002 and
+*Symphonia* 2003 — exactly the five positive results above, in order — so the
+two projects were demonstrably aware of each other while sharing no code.
+Second, the three sibling i-appli used as controls are **obfuscated** to
+single-letter class names while *Tales of Tactics* is not, so the negative does
+not rest on one build's tooling.
+[keitai-talesoftactics-doc](https://github.com/vs-sr-dev/keitai-talesoftactics-doc).
+
 So the current boundary of this format is: **the *Tales* codebase itself**,
 for as long as that codebase carried its own decompressor — and inside that
 boundary the code did not evolve. From 1997 to 2000 it was recompiled to the
@@ -655,6 +700,74 @@ I/O processor images were ruled out in 2004. On *Tales of Rebirth* it returned
 eight sites in the main executable and five in `BOOT.IRX`, and **none at all** in
 `IOPRP300.IMG`, which is nineteen stock Sony modules.
 
+### When the target is a virtual machine, the constant scan does not run
+
+The `4078` scan assumes a machine whose constants live in immediate fields
+inside fixed-width instruction words. That assumption held across MIPS and
+PowerPC and it is why the shortcut generalised. It fails completely on a JVM
+target, and it fails for a reason worth naming, because the *Tales* line
+reached Java in 2004 and again in 2020.
+
+On the JVM an integer constant reaches the code three different ways, and a
+byte scan sees at most one of them:
+
+| Delivery | Encoding | Found by a raw scan for 4078? |
+|---|---|---|
+| `CONSTANT_Integer` in the constant pool, loaded by `ldc` / `ldc_w` | a 5-byte pool entry at an arbitrary file offset | only by accident |
+| `sipush` | opcode `0x11` + **signed 16-bit** operand — 4,078 fits | only by accident |
+| `bipush` | opcode `0x10` + **signed 8-bit** — 4,078 does **not** fit | never |
+| computed, e.g. `sipush 4096; bipush 18; isub` | the constant never exists | never |
+
+And bytecode is not scannable in the first place: it is unaligned, `tableswitch`
+pads to a four-byte boundary, and the constant pool interleaves `Utf8` payloads
+with everything else, so any fixed pattern matches by chance.
+
+**So on a Java target the scan has to become a parse.** The variant that works:
+
+1. **Parse the class file properly** — constant pool, fields, methods,
+   attributes — and walk each method's `Code` with a full opcode length table
+   so operands can be read. A parser in the Python standard library is about
+   400 lines and needs no decompiler, which keeps the numbers reproducible:
+   [`classfile.py`](https://github.com/vs-sr-dev/keitai-talesoftactics-doc/blob/main/tools/classfile.py).
+2. **Look for 4078 and 4079 in all three delivery paths at once** — pool
+   integers, `sipush` operands, `ldc` targets — and report the *denominator*.
+   "Zero hits" means nothing without "out of how many constants".
+3. **Then stop relying on the constant, because it can be computed.** Look for
+   the structures instead, which a compiler cannot rewrite away: a
+   **4,096-element array allocation**, the control-register refill `x | 0xFF00`,
+   the ring mask `x & 0x0FFF`, `>> 4` adjacent to `& 0x0F`, and the run escape's
+   `+3` and `+19`. These are the same fingerprints section 3 describes; only
+   their encoding changes.
+4. **Investigate every near-miss rather than dismissing it.** On *Tales of
+   Tactics* the scan returned two `sipush 4096` and two `sipush 274` — both
+   codec constants — and both were innocent: a 4 KB stream read buffer and a
+   drawing coordinate. A negative is only worth quoting if the positives inside
+   it were read.
+5. **Then run the reference decoder blind anyway**, over every payload: the
+   archive as shipped, every member inflated, every nested container, and every
+   member of those. It costs nothing and it is the only test that does not
+   depend on having guessed the right fingerprint.
+   [`blind_decode.py`](https://github.com/vs-sr-dev/keitai-talesoftactics-doc/blob/main/tools/blind_decode.py).
+
+The same reasoning applies to any bytecode target, and the analogous first
+question for a non-console build is always **which decompressor the platform
+already provides** — because that is what a small team will use. On DoJa it is
+`com.nttdocomo.util.JarInflater`; on the GBA it was the BIOS `LZ77UnComp`.
+Finding the platform's own decompressor called by name is faster than proving
+a custom one absent, and it usually settles the question first.
+
+### Control with a sibling build, not only with the runtime
+
+The C-runtime control above works between two builds of one program. Off the
+console there may be no shared runtime to compare — but there is usually a
+sibling. Running the identical probes over other titles from the same publisher
+on the same platform turns "this build does not use the format" into "this
+platform line does not use the format", which is a much stronger statement and
+costs one extra command. On *Tales of Tactics* three sibling i-appli were
+measured this way; the negative held across all four, and two of the three
+turned out to be obfuscated where the documented title is not, which also rules
+out the tooling as an explanation.
+
 ### Comparing two builds: search the whole file, and control with the runtime
 
 Two refinements, both learned in 2004 and both cheap.
@@ -716,8 +829,11 @@ instead. See
   file as its neighbour's, and it still produces **2,851 of 2,851** blocks the
   unmodified reference decoder reads. A fork of the code did not fork the format.
   Two dialects, seven builds, four consoles, both byte orders, nine years, and
-  the split is still 1995/1997. What is left to test is the 2005 PSP port of
-  *Eternia* and the 2006 PlayStation 2 remake of *Destiny*.
+  the split is still 1995/1997. The eighth build tested, *Tales of Tactics*
+  (i-appli, 2004), is the first that does not contain the format at all — and it
+  could not have, being a Java application — so it adds no dialect and removes
+  no doubt. What is left to test is the 2005 PSP port of *Eternia* and the 2006
+  PlayStation 2 remake of *Destiny*.
 * **~~Was the source ever edited after 1997?~~** *Answered, and then
   re-answered.* The first answer was "yes, once, in 2004". *Tales of Rebirth*,
   three months after *Symphonia*'s PlayStation 2 port and on the same R5900,
@@ -791,6 +907,25 @@ instead. See
   per-archive run-escape setting is per-archive there too, and sharply: 93.5%
   method 3 among top-level members against 58.1% inside `SCPK` bundles, on one
   disc from one packer run.
+* **~~Where is the boundary of the format?~~** *Narrowed once more, from
+  outside the console line.* The boundary was already known not to be the
+  company (*Venus & Braves*), the console (both PlayStation 2 games on one
+  disc) or the series name (*Berseria*). *Tales of Tactics* removes the last
+  ambiguity by being a *Tales* title, from the same publisher, **built the day
+  Rebirth was released**, that contains no trace of the format across 971,959
+  bytes and 6,286 integer constants — and whose own party table names the leads
+  of the five titles that do contain it. The boundary is **the console C
+  codebase**, and it is a boundary of *inheritance* rather than of choice: a
+  Java application on a phone had nothing to inherit. Section 6.
+  [keitai-talesoftactics-doc](https://github.com/vs-sr-dev/keitai-talesoftactics-doc).
+* **Was the format ever ported to a virtual machine?** Not in the two
+  Java-family builds examined. *Tales of Tactics* (i-appli, 2004) and *Tales of
+  Crestoria* (Android, 2020) both use only the platform's own decompression. A
+  decoder for this format in JVM bytecode would be perhaps sixty lines and a few
+  hundred bytes, which the 2004 build — 10,298 bytes under its size cap — could
+  plausibly have afforded; there is no evidence anyone considered it. What would
+  settle it is a *Tales* keitai title that ships its own container rather than
+  one-entry JARs, and none of the four examined does.
 * **Why the nibble swap?** No functional reason has been found. It costs
   nothing either way and it is the sort of thing that changes when code is
   rewritten from a description rather than ported line by line — which, if
