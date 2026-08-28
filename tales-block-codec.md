@@ -323,6 +323,7 @@ from the 1997 code only where the 1997 code is wrong.
 | **Tales of Tactics** | **i-appli (DoJa)** | **2004** | **no** — a Java application; deflate, twice, both the platform's |
 | **Tales of Legendia** | **PlayStation 2** | **2005** | **this format**, one method — the *same engine*, an **unrelated source**, and a **new envelope** |
 | **Tales of the Abyss** | **PlayStation 2** | **2005** | **this format**, methods 1 / 3 — the **1997 source again**, recompiled, and the nine-byte header back |
+| **Tales of the Tempest** | **Nintendo DS** | **2006** | **no** — and neither is anything else; the data is stored raw |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
 
 ### The 2000 build is not a reimplementation
@@ -736,6 +737,95 @@ from any of the 109 appears in that image. Rebirth was the first clean disc and
 Legendia the second; three in a row was going to be a policy and it is not.
 [ps2-talesoftheabyss-doc](https://github.com/vs-sr-dev/ps2-talesoftheabyss-doc).
 
+### The eleventh build changes what a negative can look like
+
+*Tales of the Tempest* (Nintendo DS, 2006) is the first title here that is not
+a console C build by the studio line, and the first on a Nintendo handheld
+since the 2003 Game Boy Advance rebuild. It was opened expecting one of three
+answers and it gave a fourth.
+
+**The scan had to be rebuilt before it could be run.** Every architecture this
+document had met carried its constants in an immediate field inside a
+fixed-width instruction word. ARM does not, or not always: a data-processing
+immediate is an 8-bit value rotated right by an even amount, so
+
+| | |
+|---|---|
+| 4070, 4071, 4078, 4079 | **cannot be encoded at all** |
+| **4080** | **can** — `0xFF ror #28` |
+
+The two cursors this document has scanned for since 2002 are *unrepresentable*
+as ARM immediates and reach the code as 32-bit words in the literal pool,
+loaded with `ldr rX, [pc, #offset]`. The 2004 constant is representable. So the
+three constants of this corpus behave in two different ways on one machine, and
+a single-pass scan sees at most one of them. Section 7 carries the two-pass
+variant.
+
+**And a step comes before the scan on this platform.** A DS `arm9.bin` is
+normally compressed by the Nintendo linker's backwards LZ, and a constant scan
+over a compressed module returns zero and looks exactly like a clean negative.
+On this cartridge neither module is compressed and there are no overlays at
+all, checked from the module parameters and from the `BLZ` footer
+independently — but the check has to happen first, every time.
+
+With both in place the answer is unambiguous, and it is quoted against its
+denominators:
+
+| | ARM9 | ARM7 |
+|---|---:|---:|
+| ARM data-processing immediates | 85,036 | 11,969 |
+| THUMB instructions carrying a literal | 53,575 | 4,034 |
+| 4-byte-aligned words | 387,310 | 41,384 |
+| PC-relative loads resolved | 31,817 | 2,703 |
+| **4078 / 4079 / 4070 / 4071, either form** | **0** | **0** |
+| 4080 | 5 immediates + 1 unreferenced word | 0 |
+
+All six `4080` sites were disassembled. One is not an instruction. One is a
+field in a static struct that nothing loads. **Four are entries of a
+4,096-scaled cosine table**, compiled as 446 eight-byte stubs — `mov r0,#K ;
+bx lr` — behind a table of branches, in which the first 91 stubs are
+`round(4096 * cos t)` for t = 0 to 90 degrees to within one, and
+**`round(4096 * cos 5 deg) = 4080`**. The structural probe agrees: zero
+`orr rX,rX,#0xFF00`, zero ARM `add #19`, zero 4,096-byte stack frames, and no
+three fingerprints inside 200 instructions of each other. And the reference
+decoder, run blind over **9,055 payloads and 256,548,562 bytes** in both
+dialects, returns **zero blocks** where its control on the 1995 cartridge
+returns 1,089 in the same invocation.
+
+**What is there instead is nothing.** The 2003 Game Boy Advance result was that
+the platform's own decompression took the format's place; repeating it here
+would have meant finding `LZ77UnComp` doing the work. Both modules link the
+NitroSDK's system-call wrappers, all six decompression services included — and
+every branch in both images was resolved, 21,462 targets in the ARM9 and 3,785
+in the ARM7, and **not one of the twelve decompression wrappers has a call
+site**, where `CpuSet` has one and `Stop/Sleep` has seven. **Zero of 4,712
+files** begins with a BIOS-format stream; 91,303 candidate offsets inside them
+yield **zero** embedded `LZ77` streams; and the cartridge as a whole
+**deflates to 52.6%**, its 739 palettes to 9.3% and its 243 bitmaps to 16.1%.
+
+The data is stored raw, and it cost nothing to store it that way: **41.3% of
+the cartridge is unused** — 52.8 MB of `0x00` and then exactly 2.5 MiB of
+`0xFF`. The only two codecs present are Actimagine's video middleware and the
+DS sound hardware's own ADPCM, and the SDK's component list names both:
+`[SDK+Actimagine:VX]`, `[SDK+NINTENDO:BACKUP]`.
+
+So this is a third kind of negative. *Venus & Braves* had a decoder-shaped hole
+and plain stored data. The Game Boy Advance rebuild swapped one decompressor
+for the platform's. *Tales of Tactics* had nothing to inherit. This build had
+room for a compressor, a platform that supplies six of them for free, and
+wrote and called neither.
+
+**And it cannot separate two variables, which is worth recording as plainly as
+the result.** The machine changed and the team changed at the same time, and no
+second Nintendo DS image was available to run the identical probes over — where
+*Tales of Tactics* was quoted against three sibling i-appli. The cartridge does
+not even name its own developer: no company string in either executable, no
+symbol table, no source path in code, and one project-shaped tag (`NT_DS1`)
+that survived only inside a 3ds Max intermediate file nobody converted. On this
+evidence "the codec does not cross to this platform" and "the codec does not
+cross to this team" are the same statement.
+[nds-talesofthetempest-doc](https://github.com/vs-sr-dev/nds-talesofthetempest-doc).
+
 ### The boundary tested on a single disc
 
 The *Tales of Destiny 2* disc is the sharpest negative control this
@@ -814,6 +904,16 @@ the console (both PlayStation 2 games are on one disc), and not the series
 name (*Berseria* shares only that). Anything that narrows or widens it is
 worth adding here.
 
+What the eleventh build adds is a **limit on what a single negative can say**.
+*Venus & Braves* changed the team and held the disc, the console and the year
+fixed. *Tales of Tactics* changed the machine and the language and held the
+publisher and the month fixed. *Tales of the Tempest* changes **the machine and
+the team together**, so its zero is compatible with the boundary being either
+one. The corpus needs a Nintendo DS control — a title from the same publisher
+and a different developer, or from the same developer and a different series —
+before this build can narrow anything. Until then it widens the *evidence* and
+not the *statement*.
+
 ---
 
 ## 7. Reading a new title
@@ -871,14 +971,20 @@ both decoders were within a hundred bytes of one of them.
 by eight, those are its bound and the 4078/4079 hit is the *cursor*, more than a
 hundred words further down the routine. See the checklist below, step 2.
 
-**It survives a change of instruction set.** On PowerPC the constant appears
-in the low half of a D-form word instead of an I-type one — as `subfic`,
-`cmpwi` and `addi` — and the word is stored big-endian, but the constant is
-the packer's and does not move. On *Tales of Symphonia*'s GameCube build the
-filter returned twelve sites in four routines, and the *offsets within each
-routine were the same three*: `+17`, `+21`, `+216` words. A tool that does both
-instruction sets is
+**It survives a change of instruction set — but not always in the same
+field.** On PowerPC the constant appears in the low half of a D-form word
+instead of an I-type one — as `subfic`, `cmpwi` and `addi` — and the word is
+stored big-endian, but the constant is the packer's and does not move. On
+*Tales of Symphonia*'s GameCube build the filter returned twelve sites in four
+routines, and the *offsets within each routine were the same three*: `+17`,
+`+21`, `+216` words. A tool that does both instruction sets is
 [`ring_sites.py`](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc/blob/main/tools/ring_sites.py).
+
+**On ARM it survives as data rather than as an operand,** because 4078 and 4079
+are not encodable there at all and a compiler puts them in the literal pool.
+That is a different search, not a harder one, and the section below carries it.
+`4080` *is* encodable on ARM, so the three constants split. Do not read a
+single-pass ARM scan's silence as a negative.
 
 It cuts the other way just as well. The absence of `4078` across a whole
 executable is strong evidence the decoder is not there, which is how *Venus &
@@ -961,13 +1067,121 @@ and the checklist quietly conflated them by making the on-disc header the test
 for both. **A build can have the algorithm without the source and without the
 container.** Ask the code first.
 
+### When the target is ARM, the constant scan becomes two scans
+
+The shortcut assumes a machine that carries constants in immediate fields
+inside fixed-width instruction words. MIPS and PowerPC both do, and that is
+why it generalised across a byte order without anyone having to think about
+it. ARM is fixed-width too, and it still breaks the assumption, for a reason
+that is pure arithmetic:
+
+**An ARM data-processing immediate is an 8-bit value rotated right by an even
+amount.** Nine significant bits do not fit. So
+
+| Constant | Encodable as an ARM immediate? |
+|---|---|
+| 4070 (`0xFE6`) | **no** |
+| 4071 (`0xFE7`) | **no** |
+| **4078 (`0xFEE`)** | **no** |
+| **4079 (`0xFEF`)** | **no** |
+| **4080 (`0xFF0`)** | **yes — `0xFF ror #28`** |
+
+The two constants this document calls the packer's cannot be written as ARM
+immediates at all. A compiler emits them as 32-bit words in the **literal
+pool** — raw data between routines — loaded with `ldr rX, [pc, #offset]`. The
+2004 constant *can* be written as an immediate. So on this one machine the
+three constants are found by two different searches and a hit in one means
+something different from a hit in the other. In THUMB nothing helps: `mov rd,
+#imm8` reaches 255, so all five are literal-pool words there too.
+
+Two further ARM-specific facts belong in the same paragraph, because they
+change what the *structural* probe of step 3 can see:
+
+* `orr rX, rX, #0xFF00` **is** encodable (`0xFF ror #24`), so the control
+  register's refill would appear as a plain immediate and a probe will find it;
+* `and rX, rY, #0x0FFF` is **not**, so the ring mask appears as a literal-pool
+  4095, or as `lsl #20` followed by `lsr #20`, and all three forms have to be
+  counted;
+* `4096` **is** encodable (`1 ror #20`), so a 4,096-byte ring on the stack or
+  passed to an allocator stays visible.
+
+**The variant that works on ARM:**
+
+0. **Decompress the module first.** On a Nintendo DS the `arm9.bin` and every
+   overlay are normally packed with `BLZ`, the linker's backwards LZ, and a
+   scan of a compressed module returns zero and looks exactly like a clean
+   negative. The overlay table says per overlay whether it is compressed; the
+   ARM9 says so in its module parameters (`compressed_static_end`), and the
+   `BLZ` footer says so independently. Check both, scan all of them, and say
+   which were compressed.
+1. **Scan the immediate fields** — every ARM data-processing instruction with
+   `I = 1`, decoded and rotated; every THUMB instruction carrying a literal.
+   Print the count of instructions scanned, not only the count of hits.
+2. **Scan the literal pool** — every 4-byte-aligned `u32` equal to a wanted
+   constant. A raw word match is weak on its own, so **cross-reference each hit
+   against every PC-relative load in the image**: a word some `ldr` points at is
+   a constant, and a word nothing points at is data. Print the number of loads
+   resolved and the number of distinct targets.
+3. **Read every near-miss, and check every THUMB hit against the ARM word that
+   contains it.** This is the ARM-specific trap and it is not optional. On a
+   mixed ARM/THUMB image a THUMB-only probe invents fingerprints out of ARM
+   code: on *Tales of the Tempest* the probe reported 24 THUMB `add #19`, and
+   all 24 are ARM words at even offsets — `0xE5CA3013` is
+   `strb r3, [r10, #19]`, `0xEB003613` is a `bl`, `0x00003013` is data. The
+   genuine ARM count was zero. A tool that prints the containing word for every
+   THUMB hit makes this a two-second check instead of a false positive.
+4. **Expect the innocent hits to be trigonometry.** `4080` is
+   `round(4096 * cos 5 deg)`, and a fixed-point engine that scales its sine and
+   cosine tables by 4,096 will carry it. On this cartridge four of the five
+   `4080` immediates are entries of exactly that table, compiled as 446
+   constant-returning stubs behind a computed branch. That is not a coincidence
+   to be dismissed; it is the reason 4080 is a weaker signal than 4078 on any
+   machine, and on ARM it is the *only* one of the five that a naive immediate
+   scan can find.
+
+A tool that does all four is
+[`ring_sites.py`](https://github.com/vs-sr-dev/nds-talesofthetempest-doc/blob/main/tools/ring_sites.py),
+which now covers MIPS, PowerPC and ARM/THUMB in one file; the structural half
+is
+[`struct_probe.py`](https://github.com/vs-sr-dev/nds-talesofthetempest-doc/blob/main/tools/struct_probe.py)
+and the near-miss reader is
+[`nearmiss.py`](https://github.com/vs-sr-dev/nds-talesofthetempest-doc/blob/main/tools/nearmiss.py).
+
+### Sweep per member, not per image
+
+A blind decode over a whole image in one buffer is not the same test as a blind
+decode over each of its files, and it is worse. `plausible()` bounds a
+candidate by whether its declared stream fits inside the buffer it sits in.
+Inside a 64 KB file that rejects nearly everything for free; inside a 134 MB
+image it rejects almost nothing, so the sweep spends its whole time decoding
+garbage the per-file pass would have discarded, and it can fail to finish at
+all.
+
+Sweep each member at every offset, and then sweep the **complement** — the
+header, the tables, the alignment slack between members, the unused tail — as
+its own set of payloads. Every byte is covered exactly once and the cost is
+what it should be. On *Tales of the Tempest* that is 4,712 files plus 3,954
+gap regions plus the nested containers: **9,055 payloads, 256,548,562 bytes,
+both dialects, zero blocks**, with the 1995 cartridge's 1,089 printed in the
+same run as the control.
+
+The same argument applies to sweeping for a *platform's* compressed streams,
+and there it comes with a second caveat worth stating rather than glossing:
+**most of the BIOS formats cannot be ruled out by decoding at all.** `RLE` and
+the two difference filters accept any byte sequence; a small Huffman tree walks
+arbitrary bits happily; `LZ11`'s four-byte token reaches 65,808 output bytes,
+so no ratio bound constrains it. `LZ77` is the one that discriminates, because
+it rejects a back-reference before the start of the output *and* its geometry
+caps the ratio at 18 / 2.125 = 8.47x. Sweep that one and report the others by
+header count, with the reason.
+
 ### When the target is a virtual machine, the constant scan does not run
 
 The `4078` scan assumes a machine whose constants live in immediate fields
 inside fixed-width instruction words. That assumption held across MIPS and
-PowerPC and it is why the shortcut generalised. It fails completely on a JVM
-target, and it fails for a reason worth naming, because the *Tales* line
-reached Java in 2004 and again in 2020.
+PowerPC, bent on ARM in the way the previous section describes, and fails
+completely on a JVM target — for a reason worth naming, because the *Tales*
+line reached Java in 2004 and again in 2020.
 
 On the JVM an integer constant reaches the code three different ways, and a
 byte scan sees at most one of them:
@@ -1017,6 +1231,17 @@ already provides** — because that is what a small team will use. On DoJa it is
 Finding the platform's own decompressor called by name is faster than proving
 a custom one absent, and it usually settles the question first.
 
+**But "linked" is not "called", and the difference is one measurement.** On the
+Nintendo DS the SDK links a table of `svc #N ; bx lr` wrappers into every
+build, decompression services included, whether or not anything uses them —
+so their presence says only that the library was linked. Resolve every branch
+in the image and count the callers of each wrapper. On *Tales of the Tempest*
+that is 21,462 distinct branch targets in the ARM9 and 3,785 in the ARM7, with
+**zero** callers for all twelve decompression wrappers and one for `CpuSet`,
+seven for `Stop/Sleep` — so the instrument is shown to find callers where there
+are callers. The answer to "which decompressor does the platform provide" can
+be "six, and it calls none of them".
+
 ### Control with a sibling build, not only with the runtime
 
 The C-runtime control above works between two builds of one program. Off the
@@ -1028,6 +1253,14 @@ costs one extra command. On *Tales of Tactics* three sibling i-appli were
 measured this way; the negative held across all four, and two of the three
 turned out to be obfuscated where the documented title is not, which also rules
 out the tooling as an explanation.
+
+**And when there is no sibling, say so and stop there.** *Tales of the Tempest*
+(Nintendo DS, 2006) changed the machine and the team in one step and no second
+DS image was available to run the identical probes over. Its zero is therefore
+compatible with the boundary being the platform *or* the team, and neither
+reading is available from that cartridge alone. A negative with two variables
+in it is still worth publishing — with the two variables named in the same
+sentence as the number.
 
 ### Comparing two builds: search the whole file, and control with the runtime
 
@@ -1105,8 +1338,13 @@ instead. See
   the nine-byte header is back with methods 0/1/3 used directly, the ring is on
   the stack again, both preload loops are written, the run escape is there with
   its `+19`, and **47,513 of 47,513 blocks decode** — 1,069,278,379 packed to
-  2,643,327,828 unpacked. Two dialects, ten builds, five platforms, both byte
-  orders, ten years, and the split is still 1995/1997.
+  2,643,327,828 unpacked. The eleventh, *Tales of the Tempest* (Nintendo DS,
+  2006), adds no dialect because it adds no codec: zero `4078` and zero `4079`
+  in either of the two encodings ARM has for them, on both processors, and
+  **zero blocks in 256,548,562 bytes** under the unmodified reference decoder
+  against a control that returns 1,089 in the same run. Two dialects, eleven
+  builds, six platforms, both byte orders, eleven years, and the split is still
+  1995/1997.
   What is left to test is the 2005 PSP port of *Eternia* and the 2006
   PlayStation 2 remake of *Destiny*.
 * **~~Was the source ever edited after 1997?~~** *Answered, and then
@@ -1267,6 +1505,37 @@ instead. See
   machine and `CPS` envelope. Legendia is not the mechanism; it is one fork of
   four, and the only one written from a description.
   [ps2-talesoftheabyss-doc](https://github.com/vs-sr-dev/ps2-talesoftheabyss-doc).
+
+  *Tales of the Tempest* (Nintendo DS, 2006) is the first build to test that
+  boundary against **a different team**, and it is the first that cannot settle
+  what it tests. Every previous control held something fixed: *Venus & Braves*
+  changed the team and kept the disc, the console and the year; *Tales of
+  Tactics* changed the machine and the language and kept the publisher and the
+  month; the Game Boy Advance rebuild changed the machine and kept the title.
+  This one changes **the machine and the team together**, so its zero is
+  compatible with the boundary being either. And no second Nintendo DS image
+  was available to run the identical probes over — the sibling control that
+  turned *Tales of Tactics* from "this build" into "this platform line" simply
+  did not exist here.
+
+  What it does add is a **new shape of negative** and a **new reason to doubt a
+  clean-looking one**. The shape: this build did not replace the codec with the
+  platform's decompressor, the way the 2003 Game Boy Advance rebuild did. It
+  replaced it with nothing. The DS BIOS offers six decompression services and
+  the SDK links wrappers for all of them into both processors; every branch in
+  both images was resolved — 21,462 targets and 3,785 — and **not one wrapper
+  has a caller**, while `CpuSet` has one and `Stop/Sleep` seven. Zero of 4,712
+  files begins with a compressed stream, 91,303 candidate offsets inside them
+  yield zero embedded `LZ77`, and the cartridge deflates to 52.6% with 41.3% of
+  it unused. A build with room for a compressor, on a platform that supplies
+  six for free, wrote and called neither.
+
+  The reason to doubt: on ARM the two constants this document has scanned for
+  since 2002 **cannot be encoded as immediates at all**, so a scan written for
+  MIPS returns silence on a machine that might well contain them. Section 7
+  carries the two-pass variant, and the moral is the one the JVM already taught
+  in a different key — *the shortcut is about a machine, not about a format*.
+  [nds-talesofthetempest-doc](https://github.com/vs-sr-dev/nds-talesofthetempest-doc).
 * **Was the format ever ported to a virtual machine?** Not in the two
   Java-family builds examined. *Tales of Tactics* (i-appli, 2004) and *Tales of
   Crestoria* (Android, 2020) both use only the platform's own decompression. A

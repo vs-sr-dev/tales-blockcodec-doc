@@ -12,7 +12,9 @@ at all, which had the algorithm to the constant and wrapped it in a header of
 its own — and the format inside that header still did not move. Four months
 later another 2005 build turned up **with** the source, recompiled from the one
 copy of it nobody had edited, and put the nine-byte header back exactly as it
-was in 1997.
+was in 1997. In 2006 a *Tales* game shipped on a Nintendo cartridge without it,
+without the platform's own decompressor, and without any compressor at all —
+on a medium two fifths of which it left empty.
 
 → **[tales-block-codec.md](tales-block-codec.md)** — the specification
 → **[tales_block.py](tales_block.py)** — the reference decoder, both dialects
@@ -35,6 +37,16 @@ there are no wide immediate fields and a constant may be a `CONSTANT_Integer`,
 a `sipush` operand, or computed and never present at all, so the scan has to
 become a parse. Section 7 carries that variant, and the parser it needs is
 [`classfile.py`](https://github.com/vs-sr-dev/keitai-talesoftactics-doc/blob/main/tools/classfile.py).
+
+And it does not survive ARM unchanged either, for a reason that is pure
+arithmetic: an ARM data-processing immediate is 8 bits rotated by an even
+amount, so **4078 and 4079 cannot be encoded at all** and reach the code as
+words in the literal pool, while **4080 can** (`0xFF ror #28`). On that one
+machine the corpus's three constants split across two different searches, and a
+single-pass scan's silence is not a negative. Section 7 carries the two-pass
+variant and
+[`ring_sites.py`](https://github.com/vs-sr-dev/nds-talesofthetempest-doc/blob/main/tools/ring_sites.py)
+now covers MIPS, PowerPC and ARM/THUMB in one file.
 
 Each *Tales* title I document produces two things: a repository about that
 build, and whatever it taught me about formats that are not specific to it.
@@ -268,6 +280,66 @@ compiled, and a specification good enough to re-implement from. Three edits of
 that file are on record and none of them propagated.
 [ps2-talesoftheabyss-doc](https://github.com/vs-sr-dev/ps2-talesoftheabyss-doc).
 
+## The result that had room for the format and used nothing at all
+
+*Tales of the Tempest*, Nintendo DS, 2006 — the eleventh build, the sixth
+platform, and the first that is not a console C build by the studio line that
+carried the codec. It was opened expecting one of three answers and gave a
+fourth.
+
+The scan had to be rebuilt before it could be run. An ARM data-processing
+immediate is an 8-bit value rotated right by an even amount, so:
+
+| Constant | Encodable as an ARM immediate |
+|---|---|
+| 4070, 4071, **4078**, **4079** | **no** — literal-pool words only |
+| **4080** | **yes** — `0xFF ror #28` |
+
+The two cursors this repository has scanned for since 2002 are unrepresentable
+on this machine. With both passes run — immediate fields, and literal-pool
+words cross-referenced against every PC-relative load — the answer is a zero
+with denominators under it:
+
+| | ARM9 | ARM7 |
+|---|---:|---:|
+| ARM data-processing immediates | 85,036 | 11,969 |
+| THUMB instructions carrying a literal | 53,575 | 4,034 |
+| 4-byte-aligned words | 387,310 | 41,384 |
+| **4078 / 4079 / 4070 / 4071, either form** | **0** | **0** |
+
+All six `4080` sites were disassembled. **Four are entries of a 4,096-scaled
+cosine table** compiled as 446 constant-returning stubs behind a computed
+branch, in which `round(4096 · cos 5°) = 4080`. And the reference decoder, run
+blind over **9,055 payloads and 256,548,562 bytes** in both dialects, returns
+**zero blocks** where its control on the 1995 cartridge returns 1,089 in the
+same invocation.
+
+What replaced it is the interesting half. The 2003 Game Boy Advance rebuild
+said the platform's own decompression takes the format's place; this build says
+nothing does.
+
+| | |
+|---|---|
+| BIOS decompression wrappers linked | 6 on each processor |
+| **Call sites for any of them** | **0**, out of 21,462 + 3,785 resolved branch targets |
+| Files beginning with a BIOS-format stream | **0 of 4,712** |
+| Embedded `LZ77` streams found in 91,303 candidate offsets | **0** |
+| The whole cartridge through `deflate` | **52.6%** — palettes 9.3%, bitmaps 16.1% |
+| Cartridge unused | **41.3%** — 52.8 MB of `0x00`, then exactly 2.5 MiB of `0xFF` |
+
+A build with room for a compressor, on a platform that supplies six of them for
+free, wrote and called neither. That is a third kind of negative: not a codec
+replaced, and not a codebase with nothing to inherit.
+
+And it is the first result here that **cannot settle what it tests**. Every
+previous control held something fixed — *Venus & Braves* changed the team and
+kept the disc; *Tales of Tactics* changed the machine and kept the publisher
+and the month. This one changes the machine and the team together, and no
+second Nintendo DS image was available to run the identical probes over. Its
+zero is compatible with the boundary being the platform or the team, and the
+cartridge does not even name its own developer.
+[nds-talesofthetempest-doc](https://github.com/vs-sr-dev/nds-talesofthetempest-doc).
+
 ## The result that showed whose format it was
 
 The same 2002 disc carries a second, unrelated game — a promotional build of
@@ -341,6 +413,8 @@ buffer, the PlayStation ones a ring — and on the 2002 PlayStation 2 disc it
 | 2005 *Legendia* decoder against its neighbours, on one CPU | **21 bytes** vs Symphonia; the no-decoder control *Venus & Braves* scores **20**, and the C-runtime control **2,420** |
 | 2005 *Abyss* corpus, unmodified reference decoder, **nine-byte header restored** | **47,513 / 47,513** blocks exact, 1,069.3 MB → 2,643.3 MB, [ps2-talesoftheabyss-doc](https://github.com/vs-sr-dev/ps2-talesoftheabyss-doc) |
 | 2005 *Abyss* decoder against its neighbours, on one CPU | **69 bytes** vs Symphonia's *unedited* pair and **4** vs its edited one; the no-decoder control scores **14**, *Legendia* **18**, and the C-runtime control **632** against both |
+| 2006 *Tempest* corpus, unmodified reference decoder, **on ARM** | **0 blocks** in 9,055 payloads and 256,548,562 bytes, both dialects; the control in the same run returns **1,089** on the 1995 cartridge, [nds-talesofthetempest-doc](https://github.com/vs-sr-dev/nds-talesofthetempest-doc) |
+| 2006 *Tempest* constant scan, both ARM encodings, both processors | **0** × 4078 / 4079 / 4070 / 4071 against 85,036 + 11,969 immediates and 387,310 + 41,384 words; all six 4080 sites read |
 | 2002 decoder against 1997 and 2000, instruction by instruction | 0 identical words, ~50% opcode sequence; control reproduces 212 bytes, [`reports/ps2-lineage.txt`](reports/ps2-lineage.txt) |
 | Self-test, no image needed — the two dialects' run arithmetic | 4–18 and 19–274 **agree across dialects**, [`reports/selftest.txt`](reports/selftest.txt) |
 | Exhaustive scan of the 6 MiB Super Famicom image | **1,089 blocks**, 115 `$81` + 974 `$83`, every one decoding to its declared length |
@@ -405,6 +479,7 @@ Dependency-free Python 3, one file, no imports beyond `sys`.
 | **Tales of Tactics** | **i-appli (DoJa)** | **2004** | **no** — a Java application; deflate twice, both the platform's | [keitai-talesoftactics-doc](https://github.com/vs-sr-dev/keitai-talesoftactics-doc) |
 | **Tales of Legendia** | **PlayStation 2** | **2005** | **yes** — the same engine from an **unrelated source**, in a **new envelope** | [ps2-talesoflegendia-doc](https://github.com/vs-sr-dev/ps2-talesoflegendia-doc) |
 | **Tales of the Abyss** | **PlayStation 2** | **2005** | **yes**, methods 1 / 3 — the **1997 source again**, recompiled, nine-byte header back | [ps2-talesoftheabyss-doc](https://github.com/vs-sr-dev/ps2-talesoftheabyss-doc) |
+| **Tales of the Tempest** | **Nintendo DS** | **2006** | **no** — and no other compressor either; the data is raw | [nds-talesofthetempest-doc](https://github.com/vs-sr-dev/nds-talesofthetempest-doc) |
 | Tales of Phantasia | Game Boy Advance | 2003 | no — GBA BIOS `LZ77UnComp` | [snes-talesofphantasia-doc](https://github.com/vs-sr-dev/snes-talesofphantasia-doc) |
 | Tales of Berseria | PC | 2017 | no — zlib inside the TL engine | [pc-talesofberseria-doc](https://github.com/vs-sr-dev/pc-talesofberseria-doc) |
 
@@ -453,10 +528,22 @@ same file that nobody edited. So the codebase was carrying both a source file
 that kept being compiled and a specification good enough to re-implement from.
 Three edits of that source are now on record and **none of them propagated**.
 
+The eleventh asks the question the corpus had never been able to ask — does the
+codec cross to a different *team*? — and cannot answer it, which is worth as
+much as an answer would have been. *Tales of the Tempest* (Nintendo DS, 2006)
+has no codec, no BIOS decompression and no compression of any kind, on a
+cartridge 41.3% of which is empty. But it changed the machine and the team in
+one step, and no second Nintendo DS image was available as a control, so its
+zero fits either boundary. What it did settle is a tooling question: the
+constant scan is about a machine, not about a format, and on ARM it had to
+become two scans before it could say anything at all.
+
 What is still untested is the 2005 PSP port of *Eternia* and the 2006
 PlayStation 2 remake of *Destiny*. The remake is the interesting one: by then
 the studio had been renamed, and if the codec is still in it, it outlived the
-team's own identity.
+team's own identity. And a single Nintendo DS control — a title from the same
+publisher and a different developer, or the reverse — would turn the eleventh
+build's zero from ambiguous into decisive.
 
 ---
 
@@ -466,6 +553,7 @@ Documentation: [CC BY 4.0](LICENSE-DOCS). `tales_block.py`: [MIT](LICENSE).
 
 *Tales of Phantasia*, *Tales of Destiny*, *Tales of Eternia*, *Tales of
 Destiny 2*, *Tales of Symphonia*, *Tales of Rebirth*, *Tales of Legendia*,
-*Tales of the Abyss* and *Venus & Braves* are trademarks of BANDAI NAMCO Entertainment.
+*Tales of the Abyss*, *Tales of the Tempest* and *Venus & Braves* are
+trademarks of BANDAI NAMCO Entertainment.
 This project is unaffiliated with and unendorsed by Bandai Namco, Namco Tales
 Studio, Wolf Team, Nintendo or Sony Interactive Entertainment.
