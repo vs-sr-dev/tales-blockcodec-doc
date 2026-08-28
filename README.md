@@ -14,7 +14,11 @@ later another 2005 build turned up **with** the source, recompiled from the one
 copy of it nobody had edited, and put the nine-byte header back exactly as it
 was in 1997. In 2006 a *Tales* game shipped on a Nintendo cartridge without it,
 without the platform's own decompressor, and without any compressor at all —
-on a medium two fifths of which it left empty.
+on a medium two fifths of which it left empty. In 2007 a second one shipped on
+the same machine, from another studio, without it and without the platform's
+decompressor either — but with 16.9 MB compressed into 32.1 MB in the
+platform's own `LZ77`, 1,344 archives of its own design, two middleware stacks
+and 3.2% of the cartridge left empty. **The machine is not the boundary.**
 
 → **[tales-block-codec.md](tales-block-codec.md)** — the specification
 → **[tales_block.py](tales_block.py)** — the reference decoder, both dialects
@@ -285,7 +289,8 @@ that file are on record and none of them propagated.
 *Tales of the Tempest*, Nintendo DS, 2006 — the eleventh build, the sixth
 platform, and the first that is not a console C build by the studio line that
 carried the codec. It was opened expecting one of three answers and gave a
-fourth.
+fourth. (The twelfth build, *Tales of Innocence*, is its control and is
+described further down; it gave a fifth.)
 
 The scan had to be rebuilt before it could be run. An ARM data-processing
 immediate is an 8-bit value rotated right by an even amount, so:
@@ -339,6 +344,68 @@ second Nintendo DS image was available to run the identical probes over. Its
 zero is compatible with the boundary being the platform or the team, and the
 cartridge does not even name its own developer.
 [nds-talesofthetempest-doc](https://github.com/vs-sr-dev/nds-talesofthetempest-doc).
+
+## The result that was opened to test another result
+
+*Tales of Innocence*, Nintendo DS, 2007 — the twelfth build, and the first here
+opened as a **control** rather than as a title. The eleventh changed the machine
+and the developer in one step and could not say which of them its zero was
+about; this one holds the publisher, the platform and the series fixed and
+changes the developer again, to Alfa System, a third studio outside the line.
+Four outcomes were possible and none was assumed.
+
+**On the codec it agrees, and its zero is the cleaner of the two.** Five modules
+— an ARM9, an ARM7 and three overlays, none compressed, checked from the overlay
+flags, the module parameters and the `BLZ` footer independently:
+
+| | total across five modules |
+|---|---:|
+| ARM data-processing immediates | 78,489 |
+| THUMB instructions carrying a literal | 140,305 |
+| 4-byte-aligned words | 554,020 |
+| PC-relative loads resolved, to distinct targets | 27,469 → 22,262 |
+| **4078 / 4079 / 4070 / 4071 / 4080, either encoding** | **0** |
+
+Not one of the five constants anywhere, where Tempest had six `4080` sites to
+disassemble. Zero `orr rX,rX,#0xFF00` refills, zero 4,096-byte stack rings, and
+the ARM/THUMB trap fired again and was caught again — 22 THUMB `add #19` in one
+overlay, all 22 ARM words read at even offsets. The unmodified reference decoder
+finds **0 blocks in 23,083 payloads and 657,419,133 bytes**, both dialects, with
+the 1995 cartridge's 1,089 printed in the same run. The twelve BIOS
+decompression wrappers have **zero callers over 40,411 resolved branch
+targets**, counted across the module boundary as well as within it, and no
+wrapper address occurs as a data word.
+
+**And then it compresses.**
+
+| | *Tempest*, 2006 | *Innocence*, 2007 |
+|---|---|---|
+| files in a BIOS compression format | **0 of 4,712** | **106 of 6,378** — 102 `LZ77`, 16.9 MB → 32.1 MB |
+| a container | none | **1,344 `EZBIND` archives, 9,646 members** |
+| cartridge unused | 41.3% | **3.2%** |
+| media share | 13.22% | **51.40%**, 2.81 hours of voice |
+| middleware | Actimagine `VX` | Actimagine **Mobiclip**, plus nine **CRI** components |
+| names its developer | nowhere | credits text, boot logo, 1,047 RTTI class names |
+
+So a *Tales* cartridge on the Nintendo DS can have a full compression pipeline,
+and one does — in a format the platform itself defines, which nothing on the
+cartridge calls the platform to decode. **The machine is excluded as the
+explanation for the eleventh build's zero.** What survives is the codebase, and
+it survives with a caveat the corpus should state rather than assume: both DS
+developers are outside the line that carried the codec, so two zeros from two
+outsiders are as consistent with *the codebase never shipped a DS title* as with
+*the boundary is the codebase*. Separating those needs a DS build from the line
+itself, and there is not one.
+
+Three things it added to the toolbox rather than to the argument: the first
+cartridge here with **overlays**, so branch resolution had to cross a module
+boundary; the first with a **container**, so every per-file pass had to learn to
+descend or silently measure a fifth of the data; and the first with a **positive
+control for the BIOS decompressors** — one animation shipped five times over,
+once per format, beside the original, which found a wrong Huffman leaf mask, a
+lost tree alignment and two mislabelled filter type bytes in tooling that had
+never been checked.
+[nds-talesofinnocence-doc](https://github.com/vs-sr-dev/nds-talesofinnocence-doc).
 
 ## The result that showed whose format it was
 
@@ -415,6 +482,9 @@ buffer, the PlayStation ones a ring — and on the 2002 PlayStation 2 disc it
 | 2005 *Abyss* decoder against its neighbours, on one CPU | **69 bytes** vs Symphonia's *unedited* pair and **4** vs its edited one; the no-decoder control scores **14**, *Legendia* **18**, and the C-runtime control **632** against both |
 | 2006 *Tempest* corpus, unmodified reference decoder, **on ARM** | **0 blocks** in 9,055 payloads and 256,548,562 bytes, both dialects; the control in the same run returns **1,089** on the 1995 cartridge, [nds-talesofthetempest-doc](https://github.com/vs-sr-dev/nds-talesofthetempest-doc) |
 | 2006 *Tempest* constant scan, both ARM encodings, both processors | **0** × 4078 / 4079 / 4070 / 4071 against 85,036 + 11,969 immediates and 387,310 + 41,384 words; all six 4080 sites read |
+| 2007 *Innocence* constant scan, both ARM encodings, **five modules** | **0** × 4078 / 4079 / 4070 / 4071 **and 4080** against **78,489** ARM immediates, **140,305** THUMB literals, **554,020** aligned words and **27,469** resolved PC-relative loads, [nds-talesofinnocence-doc](https://github.com/vs-sr-dev/nds-talesofinnocence-doc) |
+| 2007 *Innocence* corpus, unmodified reference decoder, **through its container** | **0 blocks** in **23,083 payloads and 657,419,133 bytes**, both dialects — every FAT file, every `EZBIND` member and every BIOS stream decompressed; the control in the same run returns **1,089** on the 1995 cartridge, [nds-talesofinnocence-doc](https://github.com/vs-sr-dev/nds-talesofinnocence-doc) |
+| 2007 *Innocence* BIOS decompressors, against the cartridge's own five-format benchmark | **5 / 5** decode byte-for-byte to the original animation beside them — and finding that fixed a wrong Huffman leaf mask, a lost tree alignment, and both difference-filter type bytes |
 | 2002 decoder against 1997 and 2000, instruction by instruction | 0 identical words, ~50% opcode sequence; control reproduces 212 bytes, [`reports/ps2-lineage.txt`](reports/ps2-lineage.txt) |
 | Self-test, no image needed — the two dialects' run arithmetic | 4–18 and 19–274 **agree across dialects**, [`reports/selftest.txt`](reports/selftest.txt) |
 | Exhaustive scan of the 6 MiB Super Famicom image | **1,089 blocks**, 115 `$81` + 974 `$83`, every one decoding to its declared length |
@@ -480,6 +550,7 @@ Dependency-free Python 3, one file, no imports beyond `sys`.
 | **Tales of Legendia** | **PlayStation 2** | **2005** | **yes** — the same engine from an **unrelated source**, in a **new envelope** | [ps2-talesoflegendia-doc](https://github.com/vs-sr-dev/ps2-talesoflegendia-doc) |
 | **Tales of the Abyss** | **PlayStation 2** | **2005** | **yes**, methods 1 / 3 — the **1997 source again**, recompiled, nine-byte header back | [ps2-talesoftheabyss-doc](https://github.com/vs-sr-dev/ps2-talesoftheabyss-doc) |
 | **Tales of the Tempest** | **Nintendo DS** | **2006** | **no** — and no other compressor either; the data is raw | [nds-talesofthetempest-doc](https://github.com/vs-sr-dev/nds-talesofthetempest-doc) |
+| **Tales of Innocence** | **Nintendo DS** | **2007** | **no** — the **control**: another studio, same platform, and it compresses in the platform's own `LZ77` | [nds-talesofinnocence-doc](https://github.com/vs-sr-dev/nds-talesofinnocence-doc) |
 | Tales of Phantasia | Game Boy Advance | 2003 | no — GBA BIOS `LZ77UnComp` | [snes-talesofphantasia-doc](https://github.com/vs-sr-dev/snes-talesofphantasia-doc) |
 | Tales of Berseria | PC | 2017 | no — zlib inside the TL engine | [pc-talesofberseria-doc](https://github.com/vs-sr-dev/pc-talesofberseria-doc) |
 
@@ -538,12 +609,38 @@ zero fits either boundary. What it did settle is a tooling question: the
 constant scan is about a machine, not about a format, and on ARM it had to
 become two scans before it could say anything at all.
 
+The twelfth is that control, and it is the first build here opened to test
+another build rather than itself. *Tales of Innocence* (Nintendo DS, 2007) holds
+the publisher, the platform and the series fixed and changes the developer
+again — Alfa System, a third studio outside the line. It returns the same zero
+on the codec, and a cleaner one: not a single 4078, 4079, 4070, 4071 **or 4080**
+in either ARM encoding across five modules, 78,489 ARM immediates, 140,305 THUMB
+literals and 554,020 aligned words. Its twelve BIOS decompression wrappers have
+zero callers over 40,411 resolved branch targets.
+
+And then it compresses — 102 files as BIOS `LZ77`, 16.9 MB becoming 32.1 MB;
+1,344 archives of its own; CRI for audio and Actimagine's Mobiclip for video;
+51.4% of the cartridge media and 3.2% of it empty. **So the Nintendo DS is not
+where the codec stops**, and Tempest's raw data is a fact about Tempest. What
+survives is the codebase, and the corpus now has to say why: both DS developers
+are outside the line that carried the codec, so two zeros from two outsiders are
+equally consistent with the boundary being the codebase and with the codebase
+never having shipped a DS title at all. That distinction is limited by what was
+made, not by what was measured.
+
+The control also came with a benchmark nobody had before. Somebody at Alfa
+System compressed one animation five different ways, kept every candidate and
+the original, and shipped the lot — and running it found that this corpus's DS
+Huffman decoder had a wrong leaf mask and a lost tree alignment, and that both
+difference filters were one type byte low. Every DS census this corpus had
+quoted was measured with instruments nothing had ever checked.
+
 What is still untested is the 2005 PSP port of *Eternia* and the 2006
 PlayStation 2 remake of *Destiny*. The remake is the interesting one: by then
 the studio had been renamed, and if the codec is still in it, it outlived the
-team's own identity. And a single Nintendo DS control — a title from the same
-publisher and a different developer, or the reverse — would turn the eleventh
-build's zero from ambiguous into decisive.
+team's own identity. On the Nintendo DS the remaining control is a title from
+the *studio line itself*, and there is not one — which is now the shape of the
+open question rather than a gap in the measurements.
 
 ---
 
