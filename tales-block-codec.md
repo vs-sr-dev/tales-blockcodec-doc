@@ -322,6 +322,7 @@ from the 1997 code only where the 1997 code is wrong.
 | **Tales of Rebirth** | **PlayStation 2** | **2004** | **this format**, methods 1 / 3 — a *different* source again, on both CPUs |
 | **Tales of Tactics** | **i-appli (DoJa)** | **2004** | **no** — a Java application; deflate, twice, both the platform's |
 | **Tales of Legendia** | **PlayStation 2** | **2005** | **this format**, one method — the *same engine*, an **unrelated source**, and a **new envelope** |
+| **Tales of the Abyss** | **PlayStation 2** | **2005** | **this format**, methods 1 / 3 — the **1997 source again**, recompiled, and the nine-byte header back |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
 
 ### The 2000 build is not a reimplementation
@@ -611,7 +612,7 @@ does not:
 
 ```
 1995-2004                       2005
-+0  u8  method                  +0x00  "CPS "
++0  u8  method                  +0x00  "CPS "
 +1  u32 packed                  +0x04  u32 packed, including the header
 +5  u32 unpacked                +0x08  u32 unpacked
                                 +0x0C  u32 zero, on every member
@@ -648,6 +649,92 @@ had the algorithm exactly — every constant, every nibble, the `+3` — and did
 have the file, and built a different container around it, and the packer that
 fed it still produced a stream the reference decoder reads without a branch.
 [ps2-talesoflegendia-doc](https://github.com/vs-sr-dev/ps2-talesoflegendia-doc).
+
+### Four months later the source file turns up again
+
+*Tales of the Abyss* is the tenth build, it is stamped **2005-11-25**, four
+months and two days after *Legendia*, and it exists to test whether the code
+still travelled anywhere. It does.
+
+The envelope goes first, because it is the cheapest question and it does not
+depend on a compiler. Legendia's sixteen-byte `CPS` chunk is **not on this
+disc**: `CPS ` and `CPS\0` together return seven hits across 4,357,816,320
+bytes against a chance rate of about one each, and all seven were located and
+sit inside Sofdec or ADX payload. What is there is section 1, complete — `+0`
+method, `+1` packed size assembled from four `lbu`s, `+5` unpacked size read by
+a separate getter, methods **0, 1 and 3 used directly**, a 4,096-byte ring
+rebuilt on the stack on every call, **both** synthetic preload loops, and the
+run escape with its `+3` and its `+19`. **47,513 of 47,513 blocks decode** to
+their declared length under the unmodified reference decoder, 1,069,278,379
+packed to 2,643,327,828 unpacked.
+
+And the bytes:
+
+| Abyss's **decoder**, 872 bytes, against | Longest identical run |
+|---|---:|
+| **Symphonia, PlayStation 2, 2004** | **69 bytes** |
+| Legendia, PlayStation 2, 2005 | 18 bytes |
+| Rebirth, PlayStation 2, 2004 | 14 bytes |
+| Destiny 2, PlayStation 2, 2002 | 12 bytes |
+| ***Venus & Braves*, 2003 — the negative control** | **14 bytes** |
+
+with the same needle length from Abyss's own C runtime returning **632** against
+Symphonia *and* **632** against Legendia — saturated, checked by widening the
+needle to 8 KB — and all three executables stamping `MW MIPS C Compiler
+(2.4.1.01)`. Byte equality was equally available against both neighbours. Only
+one of them gave any.
+
+The sharper half is *which* copy. `SLPS_254.00` carries this codec **four
+times**, in two pairs which this document already records as sharing 2 identical
+words in 276 with each other. The pair at `0x001C93D0` is the one the 2004
+headline above is about — the quadword `bzero` with **4080**. Abyss scores
+**4 bytes** and one identical word against it. The pair at `0x00242C5C` is the
+other one, the copy in the same file that still clears the ring the 1997 way and
+still writes the preload, and Abyss scores **31 identical words in 200, a
+68-byte run, 56.5% same opcode**, diverging on register allocation and nothing
+else:
+
+```
+Abyss   0x00122288  sb    zero, 0(v1)     Symphonia  0x00242CC0  sb    zero, 0(v1)
+Abyss   0x0012228C  daddu t7, zero, zero  Symphonia  0x00242CC4  daddu t4, zero, zero
+```
+
+Their dispatchers say it again. Both allocate `addiu sp, sp, -4144`, both put
+the ring at `sp + 16`, both read the five header bytes with individual `lbu`s in
+nearly the same order, and 10 of 44 words are identical in a routine that is
+mostly `jal` targets and branch offsets. Two differences of substance: Symphonia
+tests method **2** before 3, 1 and 0 and routes it to the error target, where
+Abyss tests 3, 1, 0 and falls through; and Symphonia inlines the stored copy
+where Abyss calls the SDK's quadword `memcpy`. Both advance the source past `+9`,
+so both are the fixed version of the 1997 defect.
+
+So the reading this document adopted after Legendia has to be narrowed rather
+than repeated. It was: the codebase propagated the codec **as knowledge, not as a
+file**. That was built on one observation and the tenth build contradicts it.
+What the corpus can now say is that the codebase carried **both** — a source file
+that kept being compiled, and a specification good enough to re-implement from
+when somebody did not have the file. The shape at ten builds is:
+
+* a **1997 source** reaching 2005 intact, via Symphonia's second pair and then
+  Abyss: inline clear, synthetic preload, nine-byte header, methods 0/1/3;
+* **three edits of it that went nowhere** — Symphonia's own 4080 quadword `bzero`
+  (2004), Rebirth's 4079 library `memset` (2004), Legendia's resumable state
+  machine and `CPS` envelope (2005);
+* and a **format** all of them agree on to the bit.
+
+Legendia is not the rule. It is one of at least three forks that did not
+propagate, and the only one of the three written from a description rather than
+from the file.
+
+One more thing this build carries that no other in the corpus does. It is not a
+clean disc: 109 members of its sound-effect archive are prefixed **`tor_`**,
+*Tales of Rebirth*'s project tag, and all **105** of their distinct names —
+`no_se_mp_steps04`, `no_se_bt_mag_rise1` and the rest — are present on Rebirth's
+own disc image, whose effect table reads `no_se_mp_steps00 … no_se_mp_steps12`.
+The audio was re-encoded rather than copied: no body needle and no ADX header
+from any of the 109 appears in that image. Rebirth was the first clean disc and
+Legendia the second; three in a row was going to be a policy and it is not.
+[ps2-talesoftheabyss-doc](https://github.com/vs-sr-dev/ps2-talesoftheabyss-doc).
 
 ### The boundary tested on a single disc
 
@@ -773,11 +860,16 @@ two are `RING − 18` and `RING − 17`; the third is 4,078 rounded up to a
 multiple of sixteen. Until 2004 only 4078 was needed, because every build
 cleared the ring with an inline loop bounded by it. Since then the constant has
 not been stable — Symphonia's PlayStation 2 port uses 4080, Rebirth 4079, and
-Legendia 2005 goes back to 4078 — so ask for all three at once and **print the
-immediate for every hit**, because which one answers tells you which mechanism
-the build uses and therefore which copy of the source it descends from. No
-other part of a game has a reason to load 4,078. On *Tales of Destiny 2* that filter returned seven sites
-across two files and both decoders were within a hundred bytes of one of them.
+Legendia 2005 and Abyss 2005 go back to 4078 — so ask for all three at once and
+**print the immediate for every hit**, because which one answers tells you which
+mechanism the build uses and therefore which copy of the source it descends from.
+No other part of a game has a reason to load 4,078.
+On *Tales of Destiny 2* that filter returned seven sites across two files and
+both decoders were within a hundred bytes of one of them.
+
+**Ask for 4070 and 4071 too.** Where the ring clear is an inline loop unrolled
+by eight, those are its bound and the 4078/4079 hit is the *cursor*, more than a
+hundred words further down the routine. See the checklist below, step 2.
 
 **It survives a change of instruction set.** On PowerPC the constant appears
 in the low half of a D-form word instead of an I-type one — as `subfic`,
@@ -815,17 +907,46 @@ The order that works:
    sweep and it fails in the informative direction: no 4078/4079/4080 anywhere
    means no decoder, and that is the strong negative that ruled out *Venus &
    Braves* and the 2004 I/O processor images.
-2. **If it hits, disassemble the hit before scanning any data.** Forty
-   instructions is enough to read off the ring base, the mask, the initial
-   cursor and the token shape, and to see whether the routine takes a *block* or
-   takes `(source, destination, length)`. If it takes the latter there is no
-   nine-byte header on that disc and the header scan will return zero however
-   long you run it.
-3. **Then find the envelope by looking at what calls the routine**, or — faster
+2. **Ask for 4070 and 4071 as well.** This is the tenth build's correction and
+   it costs one more command. The scan finds `RING − 18` and `RING − 17`, which
+   are the *cursor*; on a build whose ring clear is an inline loop **unrolled by
+   eight** the loop bound is 4071 or 4070 instead, and the cursor is set far
+   below it. On *Tales of the Abyss* the 4078/4079 hits land at **+135 and +139
+   words** into their routines; `--imm 4070,4071` puts them at +10 and +11. See
+   step 3, which stops working when the hit is 139 words in.
+   The two constants say something else as well, and it is a *toolchain*
+   signature rather than a source one: *Destiny 2* (2002, no compiler string)
+   clears the ring one `sb` at a time with 4078, while *Symphonia*'s second
+   pair, *Legendia* and *Abyss* — all three stamping `MW MIPS C Compiler
+   (2.4.1.01)` — unroll it by eight. Legendia shares 18 bytes with Abyss's
+   decoder and unrolls it identically, so the unroll is the compiler's. Do not
+   read 4070/4071 as a packer constant; 4078 and 4079 are still the only ones
+   that are.
+3. **Disassemble the hit before scanning any data.** Forty instructions from the
+   *top of the routine* is enough to read off the ring base, the mask, the
+   initial cursor and the token shape, and to see whether the routine takes a
+   *block* or takes `(source, destination, length)`. If it takes the latter
+   there is no nine-byte header on that disc and the header scan will return
+   zero however long you run it. Forty instructions around a *hit* is not the
+   same thing once the hit can be 139 words in — walk back to the prologue
+   first.
+4. **Then find the envelope by looking at what calls the routine**, or — faster
    — by looking at what the container's members actually start with. Legendia's
    answered itself: its archive members are named `*.cps` and they begin
-   `CPS `.
-4. **Do not treat the preload as given.** Every PlayStation-family build from
+   `CPS `.
+5. **Do not stop the census at the member level.** A member can be a *flat run*
+   of blocks with no container header of its own — one block after another, each
+   starting on a sector boundary so the loader can seek to one without reading
+   the ones in front of it. On *Tales of the Abyss* twenty-seven members are
+   built that way and they hold **46,345 of the disc's 47,513 blocks**, which is
+   97.5% of them and 545 MB of packed data. The failure is silent and it looks
+   like success: `F0.PKF` is 37,951,488 bytes, its first nine bytes are a
+   perfectly valid header, and a member-level census decodes 163,176 bytes,
+   matches the declared length, and reports one block. Walk from the first
+   block, align each next offset up to the sector, and accept the run only if
+   the walk reaches the end of the member — which is what stops an ordinary
+   file whose first byte happens to be 1 or 3 from being mistaken for one.
+6. **Do not treat the preload as given.** Every PlayStation-family build from
    1997 to 2004 fills the ring with 3,840 synthetic bytes before reading a
    token. Legendia's `ring_init` clears 4,078 bytes and returns. Since section 4
    also warns that a wrong dictionary still produces the *right length*, the
@@ -979,8 +1100,13 @@ instead. See
   ring, 4,508 of 4,508 members read by the unmodified reference decoder. It
   drops the run escape entirely, which is a *narrowing* of the dialect rather
   than a third one, and it drops the synthetic preload, which is the first
-  change to the dictionary since 1997. Two dialects, nine builds, five
-  platforms, both byte orders, ten years, and the split is still 1995/1997.
+  change to the dictionary since 1997. The tenth, *Tales of the Abyss*
+  (PlayStation 2, 2005), reverses every one of those changes four months later:
+  the nine-byte header is back with methods 0/1/3 used directly, the ring is on
+  the stack again, both preload loops are written, the run escape is there with
+  its `+19`, and **47,513 of 47,513 blocks decode** — 1,069,278,379 packed to
+  2,643,327,828 unpacked. Two dialects, ten builds, five platforms, both byte
+  orders, ten years, and the split is still 1995/1997.
   What is left to test is the 2005 PSP port of *Eternia* and the 2006
   PlayStation 2 remake of *Destiny*.
 * **~~Was the source ever edited after 1997?~~** *Answered, and then
@@ -1071,6 +1197,20 @@ instead. See
   is 56 packed bytes producing 128; the largest is **3,864,151 packed producing
   6,162,880**, nearly four times the 2003 and 2004 ceilings, so whatever lifted
   the ~30 KB limit between 2002 and 2003 has kept lifting.
+  The 2005 *Tales of the Abyss* disc undoes Legendia's change to the input
+  contract and keeps everything else. **The preload is back in the decoder and
+  the packer uses it**: decoding 120 sampled members twice, once with the ring as
+  published and once cleared to zeros, changes the output of **105** of them and
+  the *length* of **none** — which is section 7's own warning demonstrated rather
+  than quoted. **The stored path is gone again**: zero method-0 blocks in
+  **47,513**, after Legendia's 3,353 raw members, and the smallest block on the
+  disc is 173 packed bytes producing 256, in method 1. **Nothing expands**, in
+  47,513. And the per-container run-escape setting is sharper here than anywhere:
+  **all 46,345 blocks inside a header-less run are method 1** and 1,155 of the
+  1,168 standalone members are method 3, with thirteen exceptions — the same
+  shape as the six blocks out of 14,200 that went the other way on the 2000 disc.
+  The ceiling came down a little: 2,307,879 packed and 5,115,328 unpacked, under
+  Legendia's but still eighty times the 2002 limit.
 * **Where is the boundary of the format?** *Narrowed from outside the console
   line, then complicated from inside it.* The boundary was already known not to
   be the company (*Venus & Braves*), the console (both PlayStation 2 games on one
@@ -1101,6 +1241,32 @@ instead. See
   For at least one build it propagated it as knowledge. Section 6.
   [ps2-talesoflegendia-doc](https://github.com/vs-sr-dev/ps2-talesoflegendia-doc),
   [keitai-talesoftactics-doc](https://github.com/vs-sr-dev/keitai-talesoftactics-doc).
+
+  *Tales of the Abyss* (2005), four months and two days after Legendia, restores
+  the clause Legendia removed — and it did so by being run as a three-way test with
+  no preferred answer. 872 bytes of its decoder score **69** against *Symphonia*'s
+  PlayStation 2 port, against **14** for the same `VENUS.ELF` control and **18**
+  for Legendia, with **632** contiguous bytes of shared C runtime against both
+  neighbours and `MW MIPS C Compiler (2.4.1.01)` stamped in all three files. It
+  also puts the nine-byte header back, complete, with methods 0/1/3 used
+  directly, the ring on the stack, both preload loops and the run escape — and
+  47,513 of 47,513 blocks decode.
+
+  And it descends from a specific one of the two copies *Symphonia* carries. The
+  pair at `0x001C93D0`, the quadword `bzero` with **4080** that this document's
+  2004 headline is about, scores **4 bytes**. The pair at `0x00242C5C`, which
+  still clears the ring the 1997 way and still writes the preload, scores 69 —
+  **31 identical words in 200**, diverging on register allocation and nothing
+  else.
+
+  So the boundary statement is now: the codebase carried **both**. A source file
+  that kept being compiled — 1997 to 2005, through *Symphonia*'s second pair to
+  *Abyss* — and a specification good enough that *Legendia* could re-implement it
+  exactly without the file. Three edits of that source are on record and **none
+  of them propagated**: *Symphonia*'s 4080, *Rebirth*'s 4079, *Legendia*'s state
+  machine and `CPS` envelope. Legendia is not the mechanism; it is one fork of
+  four, and the only one written from a description.
+  [ps2-talesoftheabyss-doc](https://github.com/vs-sr-dev/ps2-talesoftheabyss-doc).
 * **Was the format ever ported to a virtual machine?** Not in the two
   Java-family builds examined. *Tales of Tactics* (i-appli, 2004) and *Tales of
   Crestoria* (Android, 2020) both use only the platform's own decompression. A
@@ -1137,6 +1303,24 @@ instead. See
   pulling one object in twice, while the 2004 PlayStation 2's two are not even
   the same length — 1,104 + 768 against 1,520 + 1,176, with 2 identical words
   out of 276 — the second far more heavily unrolled than the first.
+  *Tales of the Abyss* (2005) resolves half of that. Its decoder shares **4
+  bytes** with the 1,104 + 768 pair and **69 bytes / 31 identical words in 200**
+  with the 1,520 + 1,176 pair, so the two copies in `SLPS_254.00` are not merely
+  different compilations of one file: one of them has descendants and the other
+  does not. Which of the two the 2004 game actually *ran* is still unresolved,
+  and neither is reachable from the other's dispatcher.
+* **~~Why is the ring clear unrolled by eight on some builds?~~** *Answered: the
+  compiler.* Four PlayStation 2 builds clear the ring with an inline loop and
+  they split by `.comment` rather than by lineage. *Destiny 2* (2002), which
+  carries no compiler string, writes one `sb` per iteration with the bound 4078.
+  *Symphonia*'s second pair, *Legendia* and *Abyss* — all three stamping
+  `MW MIPS C Compiler (2.4.1.01)` — write eight, so the bound is 4071 or 4070 and
+  the 4078/4079 that section 7 scans for is the *cursor*, more than a hundred
+  words further down. *Legendia* is the decisive row: it shares 18 bytes with
+  *Abyss*'s decoder, which is this document's noise floor, and unrolls the same
+  loop identically anyway. So 4070 and 4071 identify the toolchain, not the
+  packer; 4078 and 4079 remain the only constants that identify the format.
+  Section 7.
 * **Where the decoder runs.** In 2002 it ran on both processors. In 2004
   *Symphonia*'s two I/O processor images contain no `4078` immediate at all:
   decompression moved entirely onto the main CPU while the I/O processor took up
@@ -1146,7 +1330,14 @@ instead. See
   pointing the same way: where `ROFS` ran on the I/O processor the codec left it,
   and where the game read its own containers the codec stayed. Whether that is a
   decision about the codec or a consequence of the file system is still not
-  answerable from the discs, but it is no longer a single observation.
+  answerable from the discs, but it is no longer a single observation. *Tales of
+  the Abyss* (2005) is the third data point and it points the same way: it runs
+  CRI's `ROFS`, and none of its five I/O processor images carries a 4078 or a
+  4079 — the two `4080`s in `IRXARC.BIN` are a hardware register value stored
+  beside a `4092` and a buffer size in an argument list, and both were
+  disassembled. Three discs with `ROFS`, three with the codec on the main CPU
+  only; two discs reading their own containers, two with a copy on the I/O
+  processor.
 * **Comparing across instruction sets.** The opcode-sequence method that
   carried the 2002 result works because R3000A and R5900 share a mnemonic
   vocabulary. Section 7 records the attempt to generalise it to PowerPC and its
