@@ -326,6 +326,7 @@ from the 1997 code only where the 1997 code is wrong.
 | **Tales of the Tempest** | **Nintendo DS** | **2006** | **no** — and neither is anything else; the data is stored raw |
 | **Tales of Innocence** | **Nintendo DS** | **2007** | **no** — the *control*: another team, same platform, and it compresses in the **platform's own** `LZ77` |
 | **Tales of Symphonia: Ratatosk no Kishi** | **Wii** | **2008** | **no** — the direct sequel to the 2003 build, **same instruction set**, from **inside the line** |
+| **Tales of Vesperia** | **Xbox 360** | **2008** | **this format**, methods 0 / 1 / 3 — the **1997 shape again**, six weeks after the build above, on a **third compiler**, beside XCompress |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
 
 ### The 2000 build is not a reimplementation
@@ -1068,6 +1069,199 @@ RTTI off, and ships its credits as video, so *who* made it is not answerable
 from the image.
 [wii-talesofsymphoniadotnw-doc](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc).
 
+### The fourteenth build is inside the gap, and it closes it from the far end
+
+The section above ends by turning the boundary question into a date: the last
+confirmed appearance of the codec was *Tales of the Abyss*, 25 November 2005,
+the first confirmed absence from the line itself was 26 June 2008, and nothing
+in this corpus covered the thirty-one months between them.
+
+*Tales of Vesperia* (Xbox 360, 7 August 2008) is inside that interval and at
+the far edge of it. Its disc image is stamped **2008-06-20** — six days before
+*Ratatosk no Kishi* shipped — and its executable's PE header is stamped
+2008-06-19. **It carries the codec.**
+
+**A step comes before the scan on this platform, and it is the third time this
+document has had to write one down.** An Xbox 360 executable is AES-128-CBC
+encrypted and may be LZX-compressed, and a constant scan over the shipped
+`.xex` returns zero and looks exactly like a clean negative — the Nintendo DS
+`BLZ` trap on a different machine. This one decrypts under the retail key and
+uses the XEX `basic` scheme, which is not compression but a run-length
+description of the address space; the recovered image is 15,958,016 bytes and
+is the *memory* image, so a file offset in it is an RVA.
+
+With that done the scan is a complete search, because PowerPC encodes all five
+constants in a D-form immediate:
+
+| | Wii 2008 | GameCube 2003 | **Xbox 360 2008** |
+|---|---:|---:|---:|
+| instruction words scanned | 637,871 | 383,328 | **3,989,504** |
+| **4078** | 0 | 6 | **2** |
+| **4079** | 0 | 6 | **2** |
+| 4070 / 4071 | 0 | 0 | **0** |
+| 4080 | 20, all innocent | 25, all innocent | **0** |
+| sites in one routine | — | 12 in four | **4 in two, at +5, +53, +103, +151** |
+
+Zero `4080` sites in four million instruction words is worth a sentence of its
+own, because this document has twice had to disassemble twenty-five and twenty
+innocent ones. There are none here, and the code says why: the ring clear is an
+inline byte loop bounded by the cursor itself, so the multiple-of-sixteen
+rounding that produced 4080 in 2004 never arises.
+
+**And it is the 1997 shape, in every place the shape can differ.** The routines
+at `0x820D51C0` and `0x820D5348` clear the ring with an inline byte loop
+bounded by **4078** and **4079**; write **both** synthetic preload loops,
+unrolled by eight, with `li r9, 255` for the second; refill the control
+register with `ori r31, r11, 0xFF00`; mask the cursor with
+`rlwinm r10, r9, 0, 20, 31`; take the length from the low nibble of the second
+token byte and the reference's high bits from the high nibble; add the `+3`;
+and carry the run escape with its `+19` and its long form. The ring is rebuilt
+**on the stack** on every call, in a 4,272-byte frame.
+
+The dispatcher is section 1 of this document, byte for byte:
+
+```
+0x820D5640  lbz  r11, 4(r31)     ; the packed size, assembled one lbz at a time
+0x820D5644  lbz  r10, 3(r31)     ; from bytes 4, 3, 2, 1 -- little-endian
+   ...
+0x820D5658  lbz  r11, 0(r31)     ; the method byte
+0x820D5660  cmplwi r11, 1
+0x820D5670  blt  cr6, ...        ; method 0 -> the SDK's memcpy
+0x820D5674  beq  cr6, ...        ; method 1 -> 0x820D51C0
+0x820D5678  cmplwi r11, 3
+0x820D567C  beq  cr6, ...        ; method 3 -> 0x820D5348
+0x820D5680  li   r3, -1          ; anything else -> error
+```
+
+**The nine-byte header is still little-endian on a big-endian machine**, for
+the third time and for the reason section 1 gave before anyone had looked at a
+GameCube. Methods 0, 1 and 3 are used directly. The unpacked size is read at
+`+5` by a separate getter. And **8,255 of 8,255 blocks decode** to their
+declared length under `tales_block.py` unmodified — 337,852,435 packed into
+775,930,739, with the 1995 cartridge's 1,089 returned by the same tool.
+
+**The strong byte test is architecturally available and practically is not, and
+saying so is the result.** Both builds are PowerPC, so `prefix_scan.py` ran:
+872 bytes of the 2003 decoder score **10** here, which is what two unrelated
+Xbox 360 titles score. But the control this document requires — *was byte
+equality available?* — comes back no. `common_run.py` between the whole 2003
+`main.dol` and the whole decrypted PE, with two unrelated Xbox 360 images
+subtracted, finds a ceiling of **28 bytes**: eleven distinct byte values, a
+`li rD, N ; b` jump-table stanza. Metrowerks against Microsoft Visual C++, and
+Nintendo's SDK against Microsoft's, share nothing longer anywhere. On the Wii
+the same tool found 835 contiguous bytes and a 10-byte decoder result therefore
+meant something; here it does not.
+
+Run where it does work, the instrument is decisive the other way. This disc and
+*Eternal Sonata* — both Xbox 360, both MSVC, both published by Namco Bandai —
+share **304 contiguous bytes** of code that two tri-Ace titles do not, while
+their decoders share **17**, the same figure this decoder scores against
+*Infinite Undiscovery*. So the tool finds shared code where there is shared
+code, and there is none in any decoder on the platform.
+
+The descent therefore has to be read off the constants and the structure, and
+there it is unanimous. Set against the ways this document records of clearing
+one array:
+
+| Build | Year | Mechanism | Constant | Preload | Header | Run escape |
+|---|---|---|---|---|---|---|
+| 1997–2003 | | inline byte loop | 4078 | both loops | nine bytes | yes |
+| Symphonia PS2 | 2004 | quadword `bzero` | 4080 | both loops | nine bytes | yes |
+| Rebirth | 2004 | library `memset` | 4079 | both loops | nine bytes | yes |
+| Legendia | 2005 | inline byte loop | 4078 | **none** | **`CPS `, sixteen** | **none** |
+| Abyss | 2005 | inline byte loop | 4078 | both loops | nine bytes | yes |
+| **Vesperia** | **2008** | **inline byte loop** | **4078 / 4079** | **both loops** | **nine bytes** | **yes** |
+
+Six independent choices, and this build makes *Abyss*'s every time. The three
+edits this document records as having gone nowhere went nowhere here either.
+
+**What it does to the previous section is to take the date away again, in a
+useful direction.** *Ratatosk* was mastered six days before this disc, from the
+same studio line, and carries no compressor of its own and no platform one
+either. This one carries both. There was no line-wide decision to drop anything
+in the thirty-one months; two projects in one quarter simply made different
+choices. The question stops being *when did the line drop the codec* and becomes
+*why did one 2008 project drop it while its sibling kept it* — which is a
+smaller question, and a different kind.
+
+**The platform's own compressor is here too, and the same routine dispatches
+both.** This is the first build since the 2003 Game Boy Advance rebuild where
+"what does the platform give you for free" has a real answer: the XDK supplies
+`XMemCompress`, LZX with a 128 KB window. The disc carries **6,128** bare
+XCompress streams — 3.33 GB expanding to 11.67 GB — beside the 7,859 codec
+blocks, and `0x820D5570` chooses between them with one `lwz` and one `cmplw`
+against XCompress's magic `0x0FF512EE`, falling through to the nine-byte
+dispatcher when it does not match. That routine allocates its 4,272-byte frame
+— sized for the codec's ring — on **both** paths, including the one that does
+not need a ring, so Microsoft's decompressor was grafted into a routine that
+already existed. Sixty-five call sites reach it out of 23,150 resolved branch
+targets; the SDK's `memcpy` has 870, so the instrument finds callers where
+there are callers.
+
+**And the packer did not cross this time.** The fake Microsoft Cabinet that
+carried `5b 80 80 8d` at `+8` in 2,051 of 2,051 payloads across 2003 and the
+Wii build is **not on this disc**: `MSCF` returns two hits against a chance rate
+of 1.82 on a 7.84 GB medium, both were located, and both sit inside
+high-entropy payload. The container is `FPS4` — big-endian, 4,126 archives, a
+**field mask** that says which of four per-entry fields are present, 32-byte
+names, and the packer's own working directory left in the header in Shift-JIS
+(`../Release/共通/UI.svo`). So of the two things the previous section said
+crossed the generation together, the envelope and its compressor, neither
+reached this disc — and the LZSS that did not cross to the Wii did.
+
+Two more things this build supplies, and one of them is a correction.
+
+**The negative controls talked back.** Four Xbox 360 PowerPC executables were
+run as controls — *Infinite Undiscovery*, *Eternal Sonata*, *Resonance of
+Fate*, *Star Ocean: The Last Hope* — and *Eternal Sonata* (2007, tri-Crescendo,
+published by Namco Bandai) is not clean. It carries a 4,096-byte-ring LZSS of
+its own: `memset(ring, 0, 4096)`, a cursor at **4078**, `& 0x0FFF`, the length
+in the low nibble, the reference's high bits in the high nibble, `+3`. It is
+**not this format** — no synthetic preload, no `| 0xFF00` refill, no nine-byte
+header, no run escape, and 17 shared bytes against 304 of shared library — but
+it is the counterexample section 7's shortcut has never had.
+
+Those constants are the canonical 1989 LZSS reference implementation's:
+`N = 4096`, `F = 18`, `THRESHOLD = 2`, and a cursor initialised to `N − F` =
+**4078**, with the match position's high bits in the high nibble of the second
+token byte and the length in the low nibble. That is the most copied compressor
+source in existence. Nothing this document has published depends on the
+constant alone — the 1997↔2000 identity is 212 bytes of object code, the 2004
+fork is 17 against 276 of runtime, the 2005 descent is 69 bytes and 31
+identical words — but the *checklist* has recommended the constant as a
+shortcut for six builds, and on a large MSVC binary it returns two to seven
+hits by itself. Section 7 now says what the constant finds and what identifies
+which one it found.
+
+**And the structural probe scored zero on a true positive until it was fixed.**
+It was calibrated on the 2003 Metrowerks build, which writes the control refill
+in place — `ori r0, r0, 0xFF00`. Microsoft Visual C++ allocates a separate
+destination and writes `ori r31, r11, 0xFF00`. A probe requiring `rA == rS`
+therefore finds **no refills in a build that plainly contains two**. Both
+spellings are now counted and both feed the cluster pass; with that, the probe
+finds this decoder without being told where it is — one cluster carrying two or
+more distinct fingerprints in 1,080,715 words, against zero in three of the
+four controls.
+
+Nothing crossed at the asset level in either direction. **0 of 11,154 payloads**
+are byte-identical to anything on the Wii disc six weeks earlier and **0 of
+11,133 member names** are shared with its 13,116; against the 2003 GameCube
+disc the figures are 0 and 1, and the one is `04.dat`. Of **106,605** internal
+names harvested from 4.68 GB, `rutee`, `dimlos`, `emil`, `marta` and `lloyd`
+all return zero, where *Ratatosk*'s equivalent figure was zero out of 71,353.
+Total reconstruction is this line's normal practice, not something that happened
+once.
+
+One last difference, and it answers a question the previous build recorded as
+unanswerable. *Ratatosk* was compiled with RTTI off, names its developer
+nowhere in either alphabet, and ships its credits as video. This build was
+compiled with RTTI **on**, carries **445 demangled C++ class names**, and its
+title metadata names both companies in Japanese:
+`株式会社バンダイナムコゲームス` and **`株式会社ナムコ・テイルズスタジオ`**.
+Whether a build names itself is a property of its build settings, and this line
+in mid-2008 did.
+[xbox360-talesofvesperia-doc](https://github.com/vs-sr-dev/xbox360-talesofvesperia-doc).
+
 ### The boundary tested on a single disc
 
 The *Tales of Destiny 2* disc is the sharpest negative control this
@@ -1491,6 +1685,191 @@ answers *does this build call the BIOS*, and they are allowed to disagree.
 [`lzprobe.py`](https://github.com/vs-sr-dev/nds-talesofinnocence-doc/blob/main/tools/lzprobe.py)
 is the probe, published with its denominators and with the fact that it failed.
 
+### What the constant finds, and what identifies which one it found
+
+This section has recommended the `4078` scan as a shortcut since the second
+build, on the strength of one sentence: *no other part of a game has a reason
+to load 4,078.* The fourteenth build supplied the counterexample, out of its
+own negative controls, and the sentence needs replacing rather than defending.
+
+**4078 is not this codebase's constant. It is LZSS's.** The canonical 1989
+reference implementation of LZSS — the most copied compressor source in
+existence — uses a 4,096-byte ring, an 18-byte maximum match and a
+three-byte minimum, initialises its cursor to `N − F` = **4078**, and packs the
+match position's high bits into the **high** nibble of the second token byte
+with the length in the low nibble. Every one of those is also true of this
+format, because this format is that implementation with three things added.
+
+*Eternal Sonata* (Xbox 360, 2007, tri-Crescendo, published by Namco Bandai) was
+run as a negative control against *Tales of Vesperia* and is not clean. It
+carries `memset(ring, 0, 4096)`, a cursor at 4078, `& 0x0FFF`, the low-nibble
+length, the high-nibble reference and the `+3` — and it is **not this format**.
+The three things this format adds are all absent from it:
+
+* the **synthetic preload** — 3,840 bytes of `(i, 0x00)` and `(i, 0xFF)` pairs,
+  which section 4 measured *Eternia* reading 1,039,128 times. The canonical
+  implementation fills its ring with spaces; *Eternal Sonata* fills it with
+  zeros and returns;
+* the **`| 0xFF00` control refill**, which is how this format's decoders know
+  when eight tokens are spent. *Eternal Sonata* keeps a byte-wide mask and a
+  separate counter in a struct;
+* the **nine-byte header with its method dispatch, and the run escape**.
+  *Eternal Sonata* is a resumable state machine producing one byte per call and
+  dispatching on an internal mode field.
+
+And the bytes agree: 872 bytes of the *Vesperia* decoder score **17** against
+it, which is what they score against an unrelated tri-Ace title, while the two
+executables share 304 contiguous bytes elsewhere.
+
+**Nothing this document has published depends on the constant alone.** The
+1997↔2000 identity is 212 bytes of object code; the 2004 fork is 17 bytes
+against 276 of shared runtime; the 2005 *Abyss* descent is 69 bytes and 31
+identical words in 200. Those results stand. What has to change is the
+shortcut's advertised strength:
+
+1. **A `4078` hit means an LZSS is present**, not that *this* LZSS is present.
+   On a large Microsoft Visual C++ binary the constant returns two to seven
+   hits by itself, scattered across unrelated routines — four Xbox 360 control
+   executables returned 7, 5, 2 and 4.
+2. **What identifies the format is the fingerprint cluster**, which is what
+   step 3 has always said to look at and which is now the load-bearing step
+   rather than the confirming one: the refill, the twelve-bit mask and the
+   high-nibble extract inside one window, plus the preload and the header.
+3. **The absence of 4078 is still a strong negative** and that half is
+   untouched. An executable with no 4078, 4079, 4070 or 4071 anywhere does not
+   contain this decoder, and that is how *Venus & Braves*, the 2004 I/O
+   processor images and *Ratatosk no Kishi* were ruled out.
+
+In short the scan is a *filter*, not a test, and it always was; six builds went
+by without a target that made the difference visible.
+
+### When the executable is encrypted
+
+Step zero has now been needed on three platforms and the failure mode is the
+same each time: a constant scan over a module that is not plaintext returns
+zero and is indistinguishable from a clean negative.
+
+| Platform | What is in the way | How to tell |
+|---|---|---|
+| Nintendo DS | `BLZ`, the linker's backwards LZ, on `arm9.bin` and every overlay | the overlay table, the module parameters, and the `BLZ` footer, checked independently |
+| Wii | nothing — partitions are AES but `WIA`/`RVZ` hand back plaintext | the partition should begin with its own game id and carry `0x5D1C9EA3` at `+0x18` |
+| **Xbox 360** | **AES-128-CBC always, and LZX often** | the XEX header states both; the recovered image must begin `MZ` |
+
+On the Xbox 360 the wrapper is `XEX2` and getting at the PE takes three steps:
+recover the session key by decrypting the security info's key with the console
+key (retail or the all-zero devkit one — try both and see which yields `MZ`);
+decrypt from `pe_data_offset` with AES-128-CBC and a zero IV; then decompress.
+The compression field distinguishes two schemes and only one of them is
+compression: `normal` is hash-linked blocks of LZX, and `basic` is a run-length
+description of the address space, a list of (data length, zero length) pairs.
+*Tales of Vesperia* is retail-keyed and `basic`.
+
+**And the recovered image is the *memory* image, which changes what an offset
+means.** A file offset in it is an RVA, and a virtual address is that RVA plus
+the image base. Two of this corpus's tools fell into that: `prefix_scan.py`
+mapped a `0x82…` address past the end of the file, produced an empty needle,
+and printed a table of zeros that reads exactly like a real negative;
+`common_run.py` read a PE's first bytes as a Nintendo `.dol` section table and
+compared a few hundred bytes instead of four megabytes. Both now recognise a
+flat PE. A tool that silently compares the wrong bytes is worse than one that
+fails.
+
+An AES implementation in the standard library there is not, on any of these
+platforms, so it has to be carried: `xex.py` in the Xbox 360 pipeline has one,
+and the console key is not a secret — it is in every emulator, because it has
+to be.
+
+### The structural probe is calibrated on a compiler, not on a machine
+
+`struct_probe.py` was written against the 2003 GameCube build and lists the
+fingerprints as that build spells them. One of them is spelled differently by a
+different compiler on the same instruction set, and the fourteenth build is
+where that was found:
+
+```
+Metrowerks   ori r0,  r0,  0xFF00      the refill, in place
+MSVC         ori r31, r11, 0xFF00      a separate destination
+```
+
+A probe that requires `rA == rS` scores **zero refills on a build that plainly
+contains two**, which is a false negative on a true positive — the worst thing
+a probe of this kind can do. Both spellings are now counted separately and both
+feed the co-occurrence pass. The fingerprint is the constant and the operation;
+the register allocation is the compiler's.
+
+The general form of this is worth stating because it will recur: **a structural
+probe is calibrated against one toolchain's idiom, and a new toolchain is a new
+calibration.** Run it against a known positive built with the *same* compiler
+before believing a zero, and if there is no such positive, say so.
+
+### The byte test's noise floor is a property of the platform
+
+This document quotes a noise floor of six to eight bytes for `prefix_scan.py`,
+measured on MIPS executables of one to four megabytes. On Xbox 360 PowerPC,
+between unrelated executables of eight to thirteen megabytes, it is **sixteen
+to seventeen**:
+
+| 872 bytes of the *Vesperia* decoder against | Run |
+|---|---:|
+| *Eternal Sonata* — unrelated | **17** |
+| *Infinite Undiscovery* — unrelated | **17** |
+| *Star Ocean: The Last Hope* — unrelated | 16 |
+| *Resonance of Fate* — unrelated | 11 |
+| the same image's own `.rdata` + `.pdata` | 5 |
+
+Two of the "controls" score within one byte of each other, and in the other
+direction the winning run against two different files lands at the *same offset
+in the needle*, which is what a generic instruction pattern does. Quote a byte
+result against the floor measured on that platform with images of that size,
+not against the corpus's default.
+
+### And the toolchain can make the strong test unavailable
+
+The whole-image control of the section above — *was byte equality available at
+all?* — has always come back yes, and the fourteenth build is the first where
+it comes back no.
+
+| Pair | Same ISA | Same compiler | Longest shared run, controls subtracted |
+|---|---|---|---:|
+| GameCube 2003 ↔ Wii 2008 | yes | yes, Metrowerks | **835 bytes** (`OSSaveFPUContext`) |
+| **GameCube 2003 ↔ Xbox 360 2008** | **yes** | **no** — Metrowerks vs MSVC | **28 bytes** |
+| Xbox 360 2008 ↔ *Eternal Sonata* 2007 | yes | yes, MSVC | **304 bytes** |
+
+Twenty-eight bytes, eleven distinct byte values, and the run is a
+`li rD, N ; b` jump-table stanza. A ten-byte decoder result quoted against that
+ceiling is not evidence of anything, and the honest report says so rather than
+reporting the ten. **When the control fails, the directed measurement has no
+denominator and must not be quoted as one** — the descent has to be argued from
+the constants and the structure instead, or left open.
+
+### Descending a container that has a field mask
+
+Section 7 already says a tool written for a flat file system fails silently on
+a nested one, in the direction of a clean-looking negative. The fourteenth
+build adds a sharper version: **a tool written for one entry layout fails
+silently on another layout of the same container.**
+
+The `FPS4` archive on that disc states an entry size *and a field mask*, and
+the mask says which of four per-entry fields are present, stored in bit order.
+Two masks occur on one disc:
+
+```
+0x000F   offset, padded size, exact size, name    every .svo
+0x008D   offset, exact size, name                 lib_data/syspack.dat
+```
+
+A reader that assumes the first reads the second's name as its size, reports
+members of 1,398,362,964 bytes inside a 10,292-byte file, raises no error, and
+would have had that archive counted as 40,760,677% full. Read the mask.
+
+The same disc is also the corpus's deepest nest — XDVDFS file, `FPS4`, nested
+`FPS4`, and the nine-byte block *whose plaintext is another `FPS4`* — and the
+descent has to run all four or the census reports 162 payloads on a disc with
+11,063 members. Where the container's members are themselves compressed and
+decompressing all of them does not finish in a session, sweep them **through
+the container's own chunk table** rather than as one blob, and say how many
+were descended into and how many were not.
+
 ### When the target is a virtual machine, the constant scan does not run
 
 The `4078` scan assumes a machine whose constants live in immediate fields
@@ -1823,11 +2202,23 @@ instead. See
   words, on a machine that encodes all of them in one instruction and on which
   the 2003 prequel spells six of each; and **0 genuine blocks in 54,022
   payloads and 4,286,322,608 bytes** — the largest medium this corpus has swept
-  — against the same 1,089. Two dialects, thirteen builds, seven platforms, both
-  byte orders, thirteen years, and the split is still 1995/1997.
+  — against the same 1,089. The fourteenth, *Tales of Vesperia* (Xbox 360,
+  7 August 2008), is the first build in six that adds no dialect because it
+  **has** the format rather than because it lacks it: two 4078 and two 4079 in
+  one pair of routines out of **3,989,504** PowerPC instruction words, both
+  synthetic preload loops, the `| 0xFF00` refill, the `& 0x0FFF` mask, the run
+  escape with its `+19`, the nine-byte header with methods 0/1/3 used directly
+  and **its sizes still assembled little-endian on a big-endian machine**, and
+  **8,255 of 8,255 blocks** decoding to their declared length under the same
+  unmodified decoder — 337,852,435 packed into 775,930,739. It is also the
+  first build compiled by a third toolchain, Microsoft Visual C++, and the
+  nibble order did not move there either. Two dialects, fourteen builds, eight
+  platforms, both byte orders, three compilers, thirteen years, and the split is
+  still 1995/1997.
   What is left to test is the 2005 PSP port of *Eternia*, the 2006 PlayStation 2
-  remake of *Destiny*, and anything at all from this line between November 2005
-  and June 2008 — which is now the interval the boundary question lives in.
+  remake of *Destiny*, *Radiant Mythology* (PSP, 2006) — and, now that the far
+  edge of the 2005-to-2008 interval is closed from inside, the 2009 PlayStation
+  3 port of *Vesperia*, which is the next place the codec could stop.
 * **~~Was the source ever edited after 1997?~~** *Answered, and then
   re-answered.* The first answer was "yes, once, in 2004". *Tales of Rebirth*,
   three months after *Symphonia*'s PlayStation 2 port and on the same R5900,
@@ -1873,8 +2264,19 @@ instead. See
 
 * **What produced the blocks?** Everything else here is about the decoders. The
   packer, which is where the shared constants actually live, has left no trace
-  in any shipped image beyond its output — and it is now the **only** thing in
-  this lineage that provably did not fork. The decoders diverged per title by
+  in any shipped image beyond its output — and until the fourteenth build it was
+  the **only** thing in this lineage that provably did not fork. *Tales of
+  Vesperia* (Xbox 360, 2008) withdraws that: its `MSCF` envelope is gone, its
+  `5b 80 80 8d` signature is gone, and its assets sit in an `FPS4` container
+  instead — six weeks after the Wii build that still had both. So the packer
+  varies and the format does not, which is the same shape as the decoders and
+  not the exception this document had recorded. Three habits are new on that
+  disc and all three are the packer's: the ceiling moved again, to
+  **9,070,491 packed producing 21,050,368** against *Legendia*'s 3,864,151;
+  the stored path is down to **one method-0 block in 8,255**; and **one block
+  expanded**, which had been zero in populations up to 47,513. Its run-escape
+  setting is 6,864 method 3 against 1,390 method 1 — 83.2%, between *Rebirth*'s
+  93.5% and *Abyss*'s inverted split. The decoders diverged per title by
   2004 and the format did not move a bit, so something was still normalising the
   output across titles that no longer shared decoder source. Four corpora now show its habits —
   it emits stored blocks below roughly 30 bytes (2000 only), it never expands,
@@ -2075,6 +2477,48 @@ instead. See
   *Eternia*, the 2006 PlayStation 2 remake of *Destiny*, *Radiant Mythology*
   (PSP, 2006) and *Vesperia* (Xbox 360, 2008) all fall inside it.
   [wii-talesofsymphoniadotnw-doc](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc).
+
+  **The fourteenth build is the last of those four, and it removes the
+  interval rather than narrowing it.** *Tales of Vesperia* (Xbox 360) has a
+  volume timestamp of **2008-06-20** — six days before *Ratatosk* shipped — and
+  a PE timestamp of 2008-06-19, and it carries the codec in the 1997 shape:
+  inline ring clear bounded by 4078 and 4079, both synthetic preload loops,
+  `ori rX, rY, 0xFF00`, `& 0x0FFF`, the nine-byte header with methods 0/1/3 used
+  directly, the run escape with `+3` and `+19`, and **8,255 of 8,255 blocks**
+  decoding to their declared length. The codec's last confirmed appearance is
+  therefore no longer November 2005 but **June 2008**, and there is no interval
+  left in which it might have been dropped, because it had not been dropped when
+  the interval ended.
+
+  So the paragraph above has to be restated, and the restatement is smaller in
+  a useful way. It is not that *the line* dropped its LZSS somewhere in
+  thirty-one months. It is that **two projects from one line, six days apart in
+  mastering, made opposite decisions**: one shipped with no compressor of its
+  own and none of the platform's, the other shipped with its own *and* the
+  platform's, dispatched from a single entry point by one comparison on the
+  first four bytes of a buffer. There was no line-wide event to date.
+
+  And the two halves of the 2008 Wii finding come apart. That build kept the
+  container and the compressor and dropped the LZSS; this one **kept the LZSS
+  and dropped the container**. The `MSCF` envelope returns two hits here against
+  a chance rate of 1.82 on a 7.84 GB medium, both located and both inside
+  high-entropy payload, and `5b 80 80 8d` is nowhere. What the assets sit in
+  instead is `FPS4`: big-endian, 4,126 archives, 11,063 members, a field mask
+  selecting which of four per-entry fields exist, 32-byte names, and the
+  packer's own Shift-JIS working directory left in the header. So the packer
+  this document calls the only thing in the lineage that provably never forked
+  is, on the evidence of these two discs, **the thing that varies**, and the
+  codec is the thing that persists.
+
+  What is still not answerable is why. The disc offers two observations and
+  settles neither: the codec's payloads on it are overwhelmingly *nested `FPS4`
+  archives* — 3,086 of 3,095 top-level block streams begin with the control byte
+  `0xAF` and the literals `F P S 4` — so it is used for structure rather than
+  for bulk, while XCompress takes 3.33 GB to 11.67 GB; and the shared entry
+  point allocates its 4,272-byte frame, sized for the codec's ring, on the
+  XCompress path too, so Microsoft's decompressor was grafted into a routine
+  that already existed rather than the other way round.
+  [xbox360-talesofvesperia-doc](https://github.com/vs-sr-dev/xbox360-talesofvesperia-doc).
 
   One more thing the control supplies, and it is about instruments rather than
   about the format. Tempest named its developer nowhere — no company string, no

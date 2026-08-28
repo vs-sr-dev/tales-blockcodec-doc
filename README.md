@@ -23,7 +23,13 @@ in 2008 the direct sequel to the 2003 GameCube build shipped on the Wii, from
 inside the line that carried the codec, on the same processor family — without
 it, and without anything of Nintendo's in its place, while wrapping 813 MB of
 its assets in the *same envelope with the same compressor's signature* as its
-prequel. **The codebase is the boundary, and the question left is a date.**
+prequel — which turned the boundary question into a date. Six weeks after that
+disc was mastered, the same studio line shipped *Tales of Vesperia* on the Xbox
+360 **with the codec**, in the 1997 shape, decoding **8,255 blocks of 8,255** —
+beside 6,128 streams of Microsoft's own XCompress, dispatched from the same
+entry point by one comparison on four bytes — and **without** the envelope or
+the compressor signature its Wii sibling kept. **The codebase is the boundary,
+there is no date, and the thing that varies is the packer.**
 
 → **[tales-block-codec.md](tales-block-codec.md)** — the specification
 → **[tales_block.py](tales_block.py)** — the reference decoder, both dialects
@@ -475,6 +481,90 @@ and it says the studio kept its container and its compressor and dropped its own
 LZSS somewhere in the thirty-one months after *Tales of the Abyss*.
 [wii-talesofsymphoniadotnw-doc](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc).
 
+## The result that took the date away
+
+*Tales of Vesperia*, Xbox 360, 7 August 2008 — the fourteenth build, the eighth
+platform, and the first one **inside** the interval the thirteenth created. That
+build had turned the boundary question into a date: last confirmed appearance
+25 November 2005, first confirmed absence from the line 26 June 2008, nothing
+in between.
+
+This disc's volume is stamped **2008-06-20**, six days before *Ratatosk* shipped
+and forty-eight before this game did. Its executable is stamped 2008-06-19. It
+carries the codec.
+
+The scan is a complete search on this machine and it had to be run on a
+decrypted image, because an Xbox 360 executable is AES-128-CBC encrypted and a
+constant scan over the shipped `.xex` returns zero and looks exactly like a
+clean negative:
+
+| | Wii 2008 | GameCube 2003 | **Xbox 360 2008** |
+|---|---:|---:|---:|
+| instruction words scanned | 637,871 | 383,328 | **3,989,504** |
+| **4078 / 4079** | **0 / 0** | 6 / 6 | **2 / 2** |
+| 4070 / 4071 / **4080** | 0 / 0 / 20 | 0 / 0 / 25 | 0 / 0 / **0** |
+| sites, and where | — | 12 in four routines | **4 in two, at +5, +53, +103, +151** |
+| blocks decoding to their declared length | **0** in 4.29 GB | 487 of 487 | **8,255 of 8,255** |
+
+and it is the 1997 shape everywhere the shape can differ: inline ring clear
+bounded by 4078 and 4079, **both** synthetic preload loops, `ori rX, rY,
+0xFF00`, `rlwinm … 0, 20, 31`, the low-nibble length and the high-nibble
+reference, the `+3`, the run escape with its `+19`, the ring rebuilt on the
+stack, and the nine-byte header with methods **0, 1 and 3 used directly** whose
+sizes are still assembled **little-endian on a big-endian machine** — for the
+third time, and for the reason section 1 gave before anyone had opened a
+GameCube.
+
+**The strong test was architecturally available and practically was not, and
+reporting that is the result.** Both builds are PowerPC, so `prefix_scan.py`
+ran and 872 bytes of the 2003 decoder scored **10** here — the same as two
+unrelated Xbox 360 titles. But the control this corpus insists on comes back
+no:
+
+| `common_run.py`, executable sections, controls subtracted | Longest identical run |
+|---|---:|
+| GameCube 2003 ↔ Wii 2008 — both Metrowerks | **835 bytes** |
+| **GameCube 2003 ↔ Xbox 360 2008** — Metrowerks vs MSVC | **28 bytes** |
+| **Xbox 360 2008 ↔ *Eternal Sonata* 2007** — both MSVC | **304 bytes** |
+| the two decoders in that last pair, `prefix_scan.py` | **17 bytes** |
+
+Twenty-eight bytes, eleven distinct byte values, a `li rD, N ; b` jump-table
+stanza: nothing longer survives between those two toolchains anywhere, so the
+ten is quoted against an unavailable test and says nothing. Run where the
+control succeeds, the same instrument is decisive the other way — 304 bytes of
+shared library against 17 of decoder is the 2004 measurement's shape, and it
+settles that this decoder is shared with nothing on the platform.
+
+**And the two halves of the Wii result come apart.** That build kept the
+container and the compressor and dropped the LZSS. This one **kept the LZSS and
+dropped the container**: `MSCF` returns two hits against a chance rate of 1.82
+on a 7.84 GB medium, both located and both inside high-entropy payload, and
+`5b 80 80 8d` is nowhere. The assets sit in `FPS4` instead — 4,126 archives,
+11,063 members, a field mask selecting which of four per-entry fields exist,
+and the packer's own Shift-JIS working directory (`../Release/共通/UI.svo`)
+left in the header. So the packer this repository called *the only thing in the
+lineage that provably never forked* is, on these two discs, the thing that
+varies.
+
+**The platform's own compressor is here too, and one routine dispatches both.**
+6,128 bare XCompress streams — 3.33 GB expanding to 11.67 GB — beside the 7,859
+codec blocks, and `0x820D5570` chooses with one `lwz` and one `cmplw` against
+`0x0FF512EE`. Its 4,272-byte stack frame is sized for the codec's ring and is
+allocated on the XCompress path too, which does not need one. 65 call sites out
+of 23,150 resolved branch targets; `memcpy` has 870.
+
+**Two corrections to section 7 came out of the controls rather than the
+target.** The structural probe scored **zero refills on a build containing two**,
+because Metrowerks writes `ori r0, r0, 0xFF00` and MSVC writes
+`ori r31, r11, 0xFF00`; both spellings are now counted. And *Eternal Sonata*
+(Xbox 360, 2007, tri-Crescendo, published by Namco Bandai), run as a negative
+control, turned out to carry a 4,096-byte-ring LZSS with the cursor at **4078**,
+the `+3` and the same nibble layout — because those are the canonical 1989 LZSS
+reference implementation's constants, not this codebase's. It is not this
+format: no synthetic preload, no `| 0xFF00` refill, no nine-byte header, no run
+escape. The scan finds *an* LZSS; the fingerprint cluster identifies *which*.
+[xbox360-talesofvesperia-doc](https://github.com/vs-sr-dev/xbox360-talesofvesperia-doc).
+
 ## The result that showed whose format it was
 
 The same 2002 disc carries a second, unrelated game — a promotional build of
@@ -556,6 +646,10 @@ buffer, the PlayStation ones a ring — and on the 2002 PlayStation 2 disc it
 | 2008 *Ratatosk no Kishi* constant scan, **PowerPC**, every image on the disc | **0** × 4078 / 4079 / 4070 / 4071 over **637,871** instruction words, on a machine that encodes all four in one instruction and where the 2003 prequel spells six of each; all twenty `4080` sites disassembled and read, [wii-talesofsymphoniadotnw-doc](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc) |
 | 2008 *Ratatosk no Kishi* corpus, unmodified reference decoder, **4.29 GB** | **0 genuine blocks** in **54,022 payloads and 4,286,322,608 bytes**, both dialects — every file, every `THP` frame, every `MSCF` payload, every `U8` node and every gap; the control in the same run returns **1,089**, and the ten chance survivors are enumerated and read |
 | 2003 GameCube decoder against the 2008 Wii sequel, **one instruction set, two consoles** | **10 bytes**; two unrelated Wii titles score **10** and **12** and the disc's own apploader **7**, while the same two executables share **835** contiguous bytes of SDK code no control has |
+| 2008 *Vesperia* constant scan, **PowerPC, MSVC, decrypted image** | **2** × 4078 and **2** × 4079 in one pair of routines out of **3,989,504** instruction words; **0** × 4070 / 4071 / 4080, [xbox360-talesofvesperia-doc](https://github.com/vs-sr-dev/xbox360-talesofvesperia-doc) |
+| 2008 *Vesperia* corpus, unmodified reference decoder, **through four levels of container** | **8,255 / 8,255** blocks exact, 337,852,435 → 775,930,739, across XDVDFS files, `FPS4` archives, nested `FPS4` and block plaintexts; the control in the same tooling returns **1,089** |
+| 2003 GameCube decoder against the 2008 Xbox 360 build, **one instruction set, two compilers** | **10 bytes** — and the whole-image control finds a ceiling of **28**, so the ten is quoted against an unavailable test and means nothing |
+| 2008 *Vesperia* decoder against three unrelated Xbox 360 titles, **byte equality demonstrated** | **17 / 17 / 16** bytes, while *Vesperia* and *Eternal Sonata* share **304** contiguous bytes of code no tri-Ace title has |
 | 2002 decoder against 1997 and 2000, instruction by instruction | 0 identical words, ~50% opcode sequence; control reproduces 212 bytes, [`reports/ps2-lineage.txt`](reports/ps2-lineage.txt) |
 | Self-test, no image needed — the two dialects' run arithmetic | 4–18 and 19–274 **agree across dialects**, [`reports/selftest.txt`](reports/selftest.txt) |
 | Exhaustive scan of the 6 MiB Super Famicom image | **1,089 blocks**, 115 `$81` + 974 `$83`, every one decoding to its declared length |
@@ -623,6 +717,7 @@ Dependency-free Python 3, one file, no imports beyond `sys`.
 | **Tales of the Tempest** | **Nintendo DS** | **2006** | **no** — and no other compressor either; the data is raw | [nds-talesofthetempest-doc](https://github.com/vs-sr-dev/nds-talesofthetempest-doc) |
 | **Tales of Innocence** | **Nintendo DS** | **2007** | **no** — the **control**: another studio, same platform, and it compresses in the platform's own `LZ77` | [nds-talesofinnocence-doc](https://github.com/vs-sr-dev/nds-talesofinnocence-doc) |
 | **Ratatosk no Kishi** | **Wii** | **2008** | **no** — the direct sequel to the 2003 build, **same ISA**, **from inside the line** | [wii-talesofsymphoniadotnw-doc](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc) |
+| **Tales of Vesperia** | **Xbox 360** | **2008** | **yes**, methods 0 / 1 / 3 — the **1997 shape**, on a third compiler, beside XCompress | [xbox360-talesofvesperia-doc](https://github.com/vs-sr-dev/xbox360-talesofvesperia-doc) |
 | Tales of Phantasia | Game Boy Advance | 2003 | no — GBA BIOS `LZ77UnComp` | [snes-talesofphantasia-doc](https://github.com/vs-sr-dev/snes-talesofphantasia-doc) |
 | Tales of Berseria | PC | 2017 | no — zlib inside the TL engine | [pc-talesofberseria-doc](https://github.com/vs-sr-dev/pc-talesofberseria-doc) |
 
