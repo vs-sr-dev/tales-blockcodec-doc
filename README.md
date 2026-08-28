@@ -18,7 +18,12 @@ on a medium two fifths of which it left empty. In 2007 a second one shipped on
 the same machine, from another studio, without it and without the platform's
 decompressor either — but with 16.9 MB compressed into 32.1 MB in the
 platform's own `LZ77`, 1,344 archives of its own design, two middleware stacks
-and 3.2% of the cartridge left empty. **The machine is not the boundary.**
+and 3.2% of the cartridge left empty. **The machine is not the boundary.** And
+in 2008 the direct sequel to the 2003 GameCube build shipped on the Wii, from
+inside the line that carried the codec, on the same processor family — without
+it, and without anything of Nintendo's in its place, while wrapping 813 MB of
+its assets in the *same envelope with the same compressor's signature* as its
+prequel. **The codebase is the boundary, and the question left is a date.**
 
 → **[tales-block-codec.md](tales-block-codec.md)** — the specification
 → **[tales_block.py](tales_block.py)** — the reference decoder, both dialects
@@ -407,6 +412,69 @@ lost tree alignment and two mislabelled filter type bytes in tooling that had
 never been checked.
 [nds-talesofinnocence-doc](https://github.com/vs-sr-dev/nds-talesofinnocence-doc).
 
+## The result that closed the boundary
+
+*Tales of Symphonia: Ratatosk no Kishi*, Wii, 26 June 2008 — the thirteenth
+build, the seventh platform, and the one the twelfth asked for by name. Its own
+open questions said: two zeros from two studios outside the line are as
+consistent with *the boundary is the codebase* as with *that codebase never
+shipped a Nintendo title*, and separating them needs a Nintendo build **from**
+the line, and there is not one.
+
+There is one, and it is unusually well conditioned. It is the **direct sequel**
+to the 2003 GameCube *Tales of Symphonia* — this repository's only PowerPC
+positive, which carries the decoder four times and decodes 487 of 487 blocks —
+on the **same processor family**, Gekko and Broadway both being PowerPC 750
+derivatives, both builds Metrowerks, both executables Nintendo `.dol` files. So
+for the first time here **the strong byte test runs across a change of
+console**, and the question is not *is it the same source* but *is it the same
+object*.
+
+The codec is not there, and the scan that says so is a complete search on this
+machine — PowerPC encodes all five constants directly, which is exactly how the
+2003 build spells them:
+
+| | Wii 2008 | GameCube 2003, the same scan |
+|---|---:|---:|
+| instruction words scanned, all images | **637,871** | 383,328 |
+| relocatable modules to scan | **none exist** | eight |
+| **4078 / 4079** | **0 / 0** | **6 / 6** |
+| `ori rX, rX, 0xFF00` refills | **0** | **14** |
+| fingerprint clusters | **0** | **4** — one per decoder copy |
+| genuine blocks, both dialects, whole disc | **0** in 4,286,322,608 bytes | 487 of 487 |
+
+and the byte test, with controls that had to be built because this repository's
+standing one, `VENUS.ELF`, is MIPS and would have measured the architecture:
+
+| 872 bytes of the 2003 decoder, whole-file, any alignment | Run |
+|---|---:|
+| GameCube 2003 — the instrument on itself | **872** |
+| **Wii 2008** | **10 bytes** |
+| *The Last Story*, Wii 2011 | 12 bytes |
+| *FF Crystal Chronicles: The Crystal Bearers*, Wii 2009 | 10 bytes |
+| the 2008 disc's own apploader | 7 bytes |
+
+**Byte equality was available and is demonstrated.** The two executables share
+**835 contiguous identical bytes** of `OSSaveFPUContext` that neither control
+image contains, and 12,143 bytes across 96 regions of at least 64 bytes — none
+of which touches either 2003 decoder copy. 835 bytes of library against 10 of
+decoder is the 2004 measurement's shape, run across a console generation.
+
+So *"the codebase never shipped a Nintendo title"* is false by measurement: it
+shipped two, and the first carries the codec four times. **The boundary is the
+*Tales* console codebase, and for the first time no alternative stands beside
+it.**
+
+**And the packer crossed where the decoder did not.** Both releases wrap their
+compressed assets in a fake Microsoft Cabinet, and the compressed stream behind
+that header carries `5b 80 80 8d` at offset `+8` in **545 of 545** payloads in
+2003 and **1,506 of 1,506** in 2008, with the four bytes in front uniformly
+random in both. Section 8 calls the packer the only thing in this lineage that
+provably never forked; this is a third sighting, five years after the second,
+and it says the studio kept its container and its compressor and dropped its own
+LZSS somewhere in the thirty-one months after *Tales of the Abyss*.
+[wii-talesofsymphoniadotnw-doc](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc).
+
 ## The result that showed whose format it was
 
 The same 2002 disc carries a second, unrelated game — a promotional build of
@@ -485,6 +553,9 @@ buffer, the PlayStation ones a ring — and on the 2002 PlayStation 2 disc it
 | 2007 *Innocence* constant scan, both ARM encodings, **five modules** | **0** × 4078 / 4079 / 4070 / 4071 **and 4080** against **78,489** ARM immediates, **140,305** THUMB literals, **554,020** aligned words and **27,469** resolved PC-relative loads, [nds-talesofinnocence-doc](https://github.com/vs-sr-dev/nds-talesofinnocence-doc) |
 | 2007 *Innocence* corpus, unmodified reference decoder, **through its container** | **0 blocks** in **23,083 payloads and 657,419,133 bytes**, both dialects — every FAT file, every `EZBIND` member and every BIOS stream decompressed; the control in the same run returns **1,089** on the 1995 cartridge, [nds-talesofinnocence-doc](https://github.com/vs-sr-dev/nds-talesofinnocence-doc) |
 | 2007 *Innocence* BIOS decompressors, against the cartridge's own five-format benchmark | **5 / 5** decode byte-for-byte to the original animation beside them — and finding that fixed a wrong Huffman leaf mask, a lost tree alignment, and both difference-filter type bytes |
+| 2008 *Ratatosk no Kishi* constant scan, **PowerPC**, every image on the disc | **0** × 4078 / 4079 / 4070 / 4071 over **637,871** instruction words, on a machine that encodes all four in one instruction and where the 2003 prequel spells six of each; all twenty `4080` sites disassembled and read, [wii-talesofsymphoniadotnw-doc](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc) |
+| 2008 *Ratatosk no Kishi* corpus, unmodified reference decoder, **4.29 GB** | **0 genuine blocks** in **54,022 payloads and 4,286,322,608 bytes**, both dialects — every file, every `THP` frame, every `MSCF` payload, every `U8` node and every gap; the control in the same run returns **1,089**, and the ten chance survivors are enumerated and read |
+| 2003 GameCube decoder against the 2008 Wii sequel, **one instruction set, two consoles** | **10 bytes**; two unrelated Wii titles score **10** and **12** and the disc's own apploader **7**, while the same two executables share **835** contiguous bytes of SDK code no control has |
 | 2002 decoder against 1997 and 2000, instruction by instruction | 0 identical words, ~50% opcode sequence; control reproduces 212 bytes, [`reports/ps2-lineage.txt`](reports/ps2-lineage.txt) |
 | Self-test, no image needed — the two dialects' run arithmetic | 4–18 and 19–274 **agree across dialects**, [`reports/selftest.txt`](reports/selftest.txt) |
 | Exhaustive scan of the 6 MiB Super Famicom image | **1,089 blocks**, 115 `$81` + 974 `$83`, every one decoding to its declared length |
@@ -551,6 +622,7 @@ Dependency-free Python 3, one file, no imports beyond `sys`.
 | **Tales of the Abyss** | **PlayStation 2** | **2005** | **yes**, methods 1 / 3 — the **1997 source again**, recompiled, nine-byte header back | [ps2-talesoftheabyss-doc](https://github.com/vs-sr-dev/ps2-talesoftheabyss-doc) |
 | **Tales of the Tempest** | **Nintendo DS** | **2006** | **no** — and no other compressor either; the data is raw | [nds-talesofthetempest-doc](https://github.com/vs-sr-dev/nds-talesofthetempest-doc) |
 | **Tales of Innocence** | **Nintendo DS** | **2007** | **no** — the **control**: another studio, same platform, and it compresses in the platform's own `LZ77` | [nds-talesofinnocence-doc](https://github.com/vs-sr-dev/nds-talesofinnocence-doc) |
+| **Ratatosk no Kishi** | **Wii** | **2008** | **no** — the direct sequel to the 2003 build, **same ISA**, **from inside the line** | [wii-talesofsymphoniadotnw-doc](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc) |
 | Tales of Phantasia | Game Boy Advance | 2003 | no — GBA BIOS `LZ77UnComp` | [snes-talesofphantasia-doc](https://github.com/vs-sr-dev/snes-talesofphantasia-doc) |
 | Tales of Berseria | PC | 2017 | no — zlib inside the TL engine | [pc-talesofberseria-doc](https://github.com/vs-sr-dev/pc-talesofberseria-doc) |
 
@@ -635,12 +707,29 @@ Huffman decoder had a wrong leaf mask and a lost tree alignment, and that both
 difference filters were one type byte low. Every DS census this corpus had
 quoted was measured with instruments nothing had ever checked.
 
-What is still untested is the 2005 PSP port of *Eternia* and the 2006
-PlayStation 2 remake of *Destiny*. The remake is the interesting one: by then
-the studio had been renamed, and if the codec is still in it, it outlived the
-team's own identity. On the Nintendo DS the remaining control is a title from
-the *studio line itself*, and there is not one — which is now the shape of the
-open question rather than a gap in the measurements.
+The thirteenth is the control the twelfth asked for, and it is not on the
+Nintendo DS at all. *Tales of Symphonia: Ratatosk no Kishi* (Wii, 2008) is the
+direct sequel to the 2003 GameCube build — same studio line, same PowerPC 750
+family, a Nintendo console, five years later — and it carries no codec, on a
+disc where the constant scan is a complete search and the strong byte test is
+available for the first time across a console generation. **10 bytes of shared
+decoder against 835 of shared SDK code**, with two unrelated Wii titles scoring
+10 and 12. So the reading that the codebase had simply never shipped a Nintendo
+title is dead, the boundary is the *Tales* console codebase with nothing
+standing beside it, and the three Nintendo zeros are three separate facts rather
+than one unexplained pattern.
+
+What that build leaves is a **date** rather than a platform. The codec's last
+confirmed appearance is *Tales of the Abyss*, 25 November 2005; its first
+confirmed absence from the line is 26 June 2008. In between, the line kept its
+own container and its own compressor — `5b 80 80 8d` sits at offset `+8` of
+2,051 of 2,051 compressed payloads across the 2003 and 2008 discs — and stopped
+carrying the LZSS the container used to hold. What is still untested is the 2005
+PSP port of *Eternia*, the 2006 PlayStation 2 remake of *Destiny*, *Radiant
+Mythology* (PSP, 2006) and *Vesperia* (Xbox 360, 2008): every one of them falls
+inside those thirty-one months. The remake is the interesting one: by then the
+studio had been renamed, and if the codec is still in it, it outlived the team's
+own identity.
 
 ---
 

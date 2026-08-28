@@ -325,6 +325,7 @@ from the 1997 code only where the 1997 code is wrong.
 | **Tales of the Abyss** | **PlayStation 2** | **2005** | **this format**, methods 1 / 3 — the **1997 source again**, recompiled, and the nine-byte header back |
 | **Tales of the Tempest** | **Nintendo DS** | **2006** | **no** — and neither is anything else; the data is stored raw |
 | **Tales of Innocence** | **Nintendo DS** | **2007** | **no** — the *control*: another team, same platform, and it compresses in the **platform's own** `LZ77` |
+| **Tales of Symphonia: Ratatosk no Kishi** | **Wii** | **2008** | **no** — the direct sequel to the 2003 build, **same instruction set**, from **inside the line** |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
 
 ### The 2000 build is not a reimplementation
@@ -906,6 +907,167 @@ format, beside the original, which found two real defects in this corpus's DS
 decompressor and is described in section 7.
 [nds-talesofinnocence-doc](https://github.com/vs-sr-dev/nds-talesofinnocence-doc).
 
+### The thirteenth build is the control the twelfth asked for
+
+*Tales of Symphonia: Ratatosk no Kishi* (Wii, 26 June 2008) exists in this
+document for one reason, and the previous section wrote the reason down: two
+zeros from two studios outside the line are compatible with *the boundary is the
+codebase* and equally compatible with *that codebase never shipped a Nintendo
+title*, and separating them needs a Nintendo build from the line itself.
+
+This is that build, and it is better conditioned than the corpus had any right
+to expect. It is the **direct sequel** to the 2003 GameCube *Tales of
+Symphonia* — the only PowerPC positive here, which carries the decoder four
+times in `main.dol` and decodes 487 of 487 blocks on each of two discs. It runs
+on the **same processor family**: the Gekko and the Broadway are both PowerPC
+750 derivatives. Both builds are Metrowerks. Both executables are Nintendo
+`.dol` files. So for the first time in this corpus **the strong byte test is
+available across a change of console**, and the question is not *is it the same
+source* but *is it the same object*.
+
+Four outcomes were possible and none was assumed: the codec descends from the
+2003 copy; the codec is there as a fourth fork; the codec is gone and
+Nintendo's own decompression is called in its place, repeating the 2003 Game
+Boy Advance result on a much bigger machine; or the codec is gone and
+middleware took over.
+
+**It is none of the four. The codec is not there, and neither is anything
+else's.**
+
+The constant scan first, and on this machine it is a complete search — unlike
+ARM, PowerPC encodes all five constants directly in a D-form immediate, which
+is exactly how the 2003 build spells them:
+
+| | Wii 2008 | GameCube 2003, the same scan |
+|---|---:|---:|
+| instruction words scanned, all images | **637,871** | 383,328 |
+| relocatable modules to scan | **none exist** | eight |
+| **4078** | **0** | 6 |
+| **4079** | **0** | 6 |
+| 4070 / 4071 | 0 | 0 |
+| 4080 | 20, all disassembled | 25, all innocent |
+
+Twelve sites in four routines at `+17`, `+21` and `+216` words in 2003; not one
+of them in 2008. All twenty `4080` sites were read, as section 7 requires:
+twelve are a 16-bit alpha counter clamped at 4,080 and then shifted right by
+four — `li r0, 255` four instructions later is what settles it, `4080 = 255 << 4`
+— and eight are `addi rX, rY, 4080`, a structure member's offset, immediately
+before a call.
+
+The structural probe agrees, and it was calibrated on the positive first:
+
+| Fingerprint | Wii 2008 | **GameCube 2003, the control** |
+|---|---:|---:|
+| `ori rX, rX, 0xFF00` refill | **0** | **14** |
+| `rlwinm rA,rS,4,20,23`, the high-nibble extract | **0** | **4** |
+| clusters carrying two or more fingerprints within 200 instructions | **0** | **4** |
+
+The control's four clusters are inside its four decoder copies, one each, found
+without the probe being told where they are.
+
+**And then the measurement this corpus has wanted since 2003.** 872 bytes of
+the 2003 decoder at `0x8005D088`, searched at any alignment through whole
+executables:
+
+| Haystack | Longest identical run |
+|---|---:|
+| GameCube 2003 — the instrument on itself | **872** |
+| **Wii 2008** | **10 bytes** |
+| *The Last Story*, Wii 2011 — negative control | 12 bytes |
+| *FF Crystal Chronicles: The Crystal Bearers*, Wii 2009 — negative control | 10 bytes |
+| the 2008 disc's own apploader — negative control | 7 bytes |
+
+The controls had to be **built**, and that is a note for section 7: this
+document's standing negative control, `VENUS.ELF`, is MIPS, and against a
+PowerPC needle it measures the architecture rather than the absence. Two
+unrelated Wii titles and the disc's own apploader took its place.
+
+**Byte equality was available and is demonstrated**, and finding it needed a
+new instrument too, because there was no known shared routine to take a needle
+from. Taking the longest identical run between the two builds' whole text
+sections gives 1,275 bytes — and it is worthless, because *Crystal Bearers*
+contains the same 1,275 bytes of Nintendo boot code. Subtracting the control
+and repeating the search:
+
+| | GameCube 2003 ↔ Wii 2008 |
+|---|---:|
+| plain | 1,275 bytes — SDK boot, also in both controls |
+| excluding *Crystal Bearers* | **835 bytes** |
+| excluding *Crystal Bearers* **and** *The Last Story* | **835 bytes** |
+| every shared region of at least 64 bytes | **96 regions, 12,143 bytes, 0.79%** |
+
+The 835-byte region is `OSSaveFPUContext` — 106 distinct byte values, `mfspr
+r5, spr920` to test paired-single enable and then thirty-two `psq_l` pairs —
+compiled in 2003 and again in 2008 to identical bytes. **Not one of the 96
+shared regions touches either decoder copy**; the nearest ends 480 bytes before
+the second copy's prologue, which confirms the `prefix_scan` result by a tool
+that was not told where to look.
+
+```
+   835 bytes of library code identical
+    10 bytes of decoder
+```
+
+That is the shape of the 2004 result — 276 of runtime against 17 of decoder —
+run across a console generation.
+
+The blind decode agrees over the largest medium this corpus has opened.
+**Zero genuine blocks in 54,022 payloads and 4,286,322,608 bytes**, both
+dialects, at every offset, with the 1995 cartridge's **1,089** returned by the
+same tool in the same run — and ten chance survivors, seventeen to 260 packed
+bytes each, all decoded and read, all of them ordinary data whose first nine
+bytes happen to parse. On a 4.29 GB medium a few were expected; on a cartridge
+none ever were, and the difference is the denominator rather than the format.
+
+**What is *not* there is as informative as what is.** The 2003 Game Boy Advance
+rebuild's lesson — a platform that supplies its own decompression gets used —
+could not repeat, because **the Wii supplies none**. `RVL_SDK` has no
+decompression service: no `LZ77UnComp`, no `svc` wrapper table, nothing the
+loader decompresses on the way in. `Yaz0`, `Yay0` and the `LZ77` header are
+conventions Nintendo's own titles implement in their own code. Both halves were
+counted anyway and reported separately, as section 7 requires: **zero** of those
+magics at offset 0 of 54,022 payloads, and **zero** in the executable as a
+string or as a `lis`/`ori` immediate pair over 576,928 instruction words and
+5,427 resolved branch targets. One caveat is owed and is stated in the pipeline:
+that executable does not name `bres`, `RSTM` or `U8` either and demonstrably
+reads all three, so on this platform the code-side zero is the weaker half.
+
+**And the packer crossed.** This is the half that turns a negative into a
+result. Both releases wrap their compressed assets in the fake Microsoft
+Cabinet the 2003 pipeline documented — an `MSCF` header no cabinet reader can
+open, used for its file entry's name, length and MS-DOS timestamp — and the
+compressed stream behind that header carries a four-byte constant:
+
+| | GameCube 2003 | Wii 2008 |
+|---|---:|---:|
+| archives | 545 | 1,506 |
+| payloads whose bytes `+8`…`+11` are `5b 80 80 8d` | **545 of 545** | **1,506 of 1,506** |
+| bytes `+0`…`+3`, distinct values | 223–229 of 256 | 255–256 of 256 |
+
+Four constant bytes behind four uniformly random ones, in 2,051 payloads
+written five years apart on two consoles. That is a compressor's preamble.
+Section 8 calls the packer the only thing in this lineage that provably did not
+fork and records it caught running twice; this is a third sighting, and it is
+the one that separates the two halves cleanly. **The envelope and its
+compressor crossed the console generation. The block codec did not.**
+
+Nothing else did. **0 of 13,391 files** are byte-identical to a 2003 file,
+**0 of 734** `MSCF` member names are shared, and `top2` — the 2003 project
+name, which survived into the 2004 PlayStation 2 port's name table — is absent
+from all 4.29 GB. Of 71,353 internal names harvested from the 595 MB that is
+searchable, the cast of *this* game is everywhere, as a direct sequel's would
+be, and there is not one name from any other title in the series: `rutee`,
+`dimlos`, `cress`, `stahn`, `reid`, `veigue`, `senel`, `luke` all return zero.
+
+The disc is the largest here by a wide margin — 4,699,979,776 bytes, 13,386
+files, **17 h 42 m of audio and 20 m 23 s of video, 70.10% media**, against
+*Abyss*'s 61.66% and 13.60 hours — and it buys no middleware at all, where the
+2004 port ran CRI's `ROFS` and *Innocence* licensed nine CRI components. It also
+does not name its developer anywhere in ASCII or Shift-JIS, was compiled with
+RTTI off, and ships its credits as video, so *who* made it is not answerable
+from the image.
+[wii-talesofsymphoniadotnw-doc](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc).
+
 ### The boundary tested on a single disc
 
 The *Tales of Destiny 2* disc is the sharpest negative control this
@@ -1446,6 +1608,158 @@ Do this *before* reaching for `.comment`. A compiler string is a good
 explanation when it is present, but it is absent in three of the four
 PlayStation-family executables here, and the runtime control works regardless.
 
+### The negative control has to be the same instruction set
+
+The whole-file byte comparison of the previous section rests on a number that
+says what "not present" scores. Since 2003 that number has come from
+`VENUS.ELF` — a PlayStation 2 executable this document has demonstrated
+contains no decoder at all — and it has been quoted as 14, 18 and 20 bytes
+against needles from four different builds.
+
+**It cannot be quoted against a needle that is not MIPS.** Run a PowerPC
+routine against `VENUS.ELF` and the answer measures how much two unrelated
+instruction sets happen to share at the byte level, which is a fact about
+encodings and not about the routine. The thirteenth build had to build its own,
+and the pattern generalises:
+
+* **two unrelated titles on the same machine**, from publishers with no
+  connection to this line. *Tales of Symphonia: Ratatosk no Kishi* used *The
+  Last Story* (Wii, 2011) and *Final Fantasy Crystal Chronicles: The Crystal
+  Bearers* (Wii, 2009), which scored **12** and **10** bytes against the 2003
+  GameCube decoder;
+* **and something from the target image itself that provably has no decoder** —
+  there, the disc's own apploader, which is Nintendo's code and scored **7**.
+
+Three controls, one of them from inside the image being examined, and the build
+under test scored 10. Quote a byte result only against controls in the same
+instruction set, and say which they are.
+
+### Finding the runtime control when you do not know where it is
+
+The C-runtime control of the previous section assumes you can name a routine
+both builds link — `memset`, `strlen`, the SIMD string code. That worked on
+four PlayStation 2 titles because they share a stamped compiler and an obvious
+library. It does not work when the two builds are five years and one console
+apart and nothing in either names a library routine.
+
+**Take the longest identical run between the two whole images instead**, and
+subtract what a stranger also has. The instrument is the same rolling hash with
+a binary search on the length, run with the whole of A as the needle; the
+subtraction is one extra argument. Between the 2003 GameCube and 2008 Wii
+builds of *Symphonia*:
+
+| | Longest identical run |
+|---|---:|
+| plain | **1,275 bytes** — and worthless |
+| excluding one unrelated Wii title | **835 bytes** |
+| excluding two | **835 bytes** |
+
+The plain answer is worthless in a way that is worth spelling out, because it
+would have been quoted: the 1,275 bytes are Nintendo's boot and exception code,
+22 distinct byte values in 1,275, present in every Wii and GameCube executable
+ever built. The 835 bytes that survive the subtraction are
+`OSSaveFPUContext`, 106 distinct byte values, one object file compiled twice
+five years apart to identical bytes.
+
+Two refinements come with it. **Compare executable sections only** — a data
+section's long runs of zeros and shared SDK tables are not evidence about a
+compiler, and they win the search every time. And **print the byte histogram of
+the winning run**, so a run that is all one value is visible as such instead of
+being quoted as a result.
+[`common_run.py`](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc/blob/main/tools/common_run.py),
+which also enumerates *every* shared region above a length rather than only the
+longest — 96 regions and 12,143 bytes on that pair, none of them touching
+either decoder copy, which confirms the directed result by a tool that was
+never told where to look.
+
+### On a four-gigabyte medium the denominators invert
+
+Every count in this document has been quoted against a chance rate, and on a
+cartridge the rate is small enough that the practice can look like a formality.
+On a DVD it is the whole reading.
+
+A four-byte needle occurs by chance about once per 4 GB of uniform data. On
+*Tales of Innocence*'s 128 MB cartridge that is **0.031** expected hits, so a
+single hit is worth locating and a zero is strong. On a 4.29 GB Wii partition it
+is **1.00**, so a single hit means nothing and **a zero is weak**. The same
+number carries opposite weight on the two media and the number does not say so.
+
+Two consequences, both of which cost real work on the thirteenth build:
+
+* **read the hits, always, because the uniform model is wrong about text.**
+  That build's sweep returned `tor_` — *Tales of Rebirth*'s project tag, which
+  on the *Abyss* disc prefixed 109 leftover sound effects — **3,865 times**
+  against a chance rate of 1.00. Every one of the 3,865 is inside the word
+  `vector_`. The model underestimates because names are not uniform, and only
+  reading them tells you which kind of hit you have.
+* **and a blind decode over billions of bytes will produce survivors.** The
+  filter needs a method byte of 1 or 3, sizes in range, and a stream decoding to
+  exactly its declared length — and over 4.29 GB of structured binary that
+  happens. Ten did on that disc, all seventeen to 260 packed bytes, all isolated,
+  all decoded and read, all ordinary data. Real blocks come in families: 487 in
+  twenty-two files in 2003, 47,513 on *Abyss*. **Report the survivors, read
+  them, and say why they are not a population** — a census that reports "0" on a
+  medium where "0" is not the expected noise floor is hiding a step.
+
+### When the container hands you the plaintext
+
+A Wii partition is AES-128-CBC with a SHA-1 hash block interleaved every
+0x8000 bytes, keyed from a title key the ticket carries encrypted. Reading its
+file system out of an `.iso` means implementing AES, which no pipeline here has
+a dependency for.
+
+It was not needed, and the reason is a property of the *container* rather than
+of the disc: **WIA and RVZ store Wii partition data decrypted and hash-free**,
+rebuilding both on output — 0x7C00 of plaintext per sector, with one partition
+entry naming the sector range and the group range. The file system is easier to
+reach from the compressed container than from the image it expands to.
+
+That is a claim about a format, so check it on the file in hand before building
+on it: the plaintext each partition hands back should begin with its own
+six-character game id and carry `0x5D1C9EA3` at `+0x18`. If it does, nothing is
+being read through a cipher.
+
+Two traps came with it and both fail silently:
+
+* **a raw-data entry aligns down to a Wii sector, 0x8000, not to the
+  container's chunk.** A reader that aligns to the chunk places the first
+  partition's ticket over the partition table, and the disc then appears to have
+  no partitions at all.
+* **a partition group's data begins with exception lists**, one per 2 MiB
+  sub-chunk and at least one, each a `u16` count followed by that many
+  `(u16, SHA-1)` records — and the block is padded to four bytes when the group
+  is stored uncompressed and not when it is compressed. Skip the wrong number of
+  bytes and every offset in the partition is wrong by two.
+
+[`wiirvz.py`](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc/blob/main/tools/wiirvz.py).
+And a Wii FST is a GameCube FST with the DOL offset, the FST offset and every
+*file* offset divided by four; lengths and directory records are not shifted.
+Getting that wrong produces a file system whose every entry points at plausible
+rubbish a quarter of the way into the partition, with no error anywhere.
+
+### Sweeping a movie is not sweeping a disc
+
+Section 7 already says to sweep per member rather than per image, because
+`plausible()` bounds a candidate by the buffer it sits in. On a 128 MB
+cartridge that is a speed argument. On a 4.29 GB partition holding a
+495,249,696-byte video file it is the difference between finishing and not:
+taken as one buffer that movie sweeps at 156 KB/s and its declared packed sizes
+reach 16 MB, so each attempt decodes megabytes before failing.
+
+**Descend into the media container too.** A Nintendo `THP` states its frame
+count and its first frame's size, and every frame states the next one's, so the
+walk is four lines and turns five movies into 36,677 payloads of about 50 KB.
+The same applies to any container whose members are individually seekable —
+and the rule that decides it is not "is this an archive" but "is the
+plausibility bound doing any work inside this buffer".
+
+Where a payload genuinely cannot be split — a compressed stream in an
+unidentified format, or a gap — sweep it in **overlapping windows** and say so:
+the thirteenth build used 8 MiB windows with 4 MiB of overlap and named every
+payload it did that to, because a block longer than the overlap could fall
+across a seam. The largest block anywhere in this corpus is 3,864,151 packed
+bytes, which fits.
+
 ### What does *not* work: comparing routines across instruction sets
 
 The opcode-sequence measure in this repository's own tooling works because
@@ -1502,11 +1816,18 @@ instead. See
   title: zero 4078 / 4079 / 4070 / 4071 / 4080 in either ARM encoding across
   five modules, 78,489 ARM immediates, 140,305 THUMB literals and 554,020
   aligned words, and **0 blocks in 23,083 payloads and 657,419,133 bytes** under
-  the same unmodified decoder, against the same 1,089-block control. Two
-  dialects, twelve builds, six platforms, both byte orders, twelve years, and
-  the split is still 1995/1997.
-  What is left to test is the 2005 PSP port of *Eternia* and the 2006
-  PlayStation 2 remake of *Destiny*.
+  the same unmodified decoder, against the same 1,089-block control. The
+  thirteenth, *Tales of Symphonia: Ratatosk no Kishi* (Wii, 2008), adds none
+  either, and it is the first build to add none while being **from the line
+  itself**: zero 4078 / 4079 / 4070 / 4071 over 637,871 PowerPC instruction
+  words, on a machine that encodes all of them in one instruction and on which
+  the 2003 prequel spells six of each; and **0 genuine blocks in 54,022
+  payloads and 4,286,322,608 bytes** — the largest medium this corpus has swept
+  — against the same 1,089. Two dialects, thirteen builds, seven platforms, both
+  byte orders, thirteen years, and the split is still 1995/1997.
+  What is left to test is the 2005 PSP port of *Eternia*, the 2006 PlayStation 2
+  remake of *Destiny*, and anything at all from this line between November 2005
+  and June 2008 — which is now the interval the boundary question lives in.
 * **~~Was the source ever edited after 1997?~~** *Answered, and then
   re-answered.* The first answer was "yes, once, in 2004". *Tales of Rebirth*,
   three months after *Symphonia*'s PlayStation 2 port and on the same R5900,
@@ -1703,6 +2024,57 @@ instead. See
   the studio line, and there is not one — which means the boundary statement now
   has a shape the corpus has not had before: it is limited by what was made, not
   by what was measured.
+
+  **The thirteenth build closes it, and it closes it from the other side.**
+  *Tales of Symphonia: Ratatosk no Kishi* (Wii, 26 June 2008) is the Nintendo
+  title from inside the line that the paragraph above says does not exist. It is
+  the **direct sequel** to the 2003 GameCube build — this corpus's only PowerPC
+  positive, four copies of the decoder in `main.dol`, 487 of 487 blocks — on the
+  **same processor family**, from the **same studio line**, five years later.
+
+  It does not carry the codec. Zero `4078` / `4079` / `4070` / `4071` over
+  637,871 PowerPC instruction words in every image on the disc, where the 2003
+  build has twelve sites in four routines; zero `ori rX, rX, 0xFF00` refills
+  where 2003 has fourteen; zero fingerprint clusters where 2003 has four, one
+  per decoder copy; and **zero genuine blocks in 54,022 payloads and
+  4,286,322,608 bytes**, both dialects, against the 1995 cartridge's 1,089 in
+  the same run.
+
+  And because both builds are Metrowerks PowerPC `.dol` files, **the strong test
+  ran across a console generation for the first time in this corpus**: 872 bytes
+  of the 2003 decoder score **10 bytes** in the 2008 executable — the same as
+  *Crystal Bearers* and two less than *The Last Story*, neither of which has any
+  connection to this line — while the same two executables share **835
+  contiguous identical bytes** of `OSSaveFPUContext` that neither control image
+  contains, and 12,143 bytes across 96 regions, **none of which touches either
+  decoder copy**.
+
+  So the sentence *"two zeros from two outsiders are equally consistent with the
+  codebase never having shipped a Nintendo title"* is false, and it is false by
+  measurement. **The codebase shipped two Nintendo titles**, in 2003 and 2008,
+  and the first one carries the codec four times. The three zeros on Nintendo
+  hardware are no longer one explanation short: the machine was excluded by the
+  twelfth build and the alternative is excluded by the thirteenth.
+
+  What replaces it is narrower, and it is about **time** rather than about
+  platforms or teams. The codec's last confirmed appearance anywhere is *Tales
+  of the Abyss*, 25 November 2005. Its first confirmed absence from the line
+  itself is 26 June 2008. In that interval this studio line moved to a new
+  console, a new SDK, C++ and Nintendo's middleware — and **kept its own
+  container and its own compressor while dropping its own LZSS**. The `MSCF`
+  envelope the 2003 discs wear is on 1,506 files here, and the compressed stream
+  behind it carries `5b 80 80 8d` at offset `+8` in **2,051 of 2,051 payloads
+  across both releases**, with the four bytes in front uniformly random. The
+  packer crossed the generation; the decoder did not.
+
+  The boundary is therefore still the *Tales* console codebase, and for the
+  first time the corpus can say so without an alternative standing beside it.
+  What it cannot say is when inside those thirty-one months the codec was
+  dropped, or why a team that kept the container dropped the thing the container
+  used to hold. Nothing in this corpus covers the interval; the 2005 PSP port of
+  *Eternia*, the 2006 PlayStation 2 remake of *Destiny*, *Radiant Mythology*
+  (PSP, 2006) and *Vesperia* (Xbox 360, 2008) all fall inside it.
+  [wii-talesofsymphoniadotnw-doc](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc).
 
   One more thing the control supplies, and it is about instruments rather than
   about the format. Tempest named its developer nowhere — no company string, no
