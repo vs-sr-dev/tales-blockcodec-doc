@@ -7,7 +7,9 @@ bytes, literally the same machine code — still shipping in 2002 on the
 PlayStation 2, on a disc that also proves it was never Namco's format at all,
 and still shipping in 2003 on a **big-endian** console with its nine-byte
 header unturned. By 2004 there was more than one copy of the source — and the
-format still did not move.
+format still did not move. By 2005 there was a build with no copy of the source
+at all, which had the algorithm to the constant and wrapped it in a header of
+its own — and the format inside that header still did not move.
 
 → **[tales-block-codec.md](tales-block-codec.md)** — the specification
 → **[tales_block.py](tales_block.py)** — the reference decoder, both dialects
@@ -194,6 +196,36 @@ smaller; none is the same. The block boundaries did not move, so the
 segmentation logic is untouched; the match search is not. In the same year
 somebody edited the decoder.
 
+## The result that separated the format from the code
+
+*Tales of Legendia*, PlayStation 2, 2005 — eight months after *Rebirth*, same
+studio, same R5900, so byte equality is available and is the strong test. It
+returns the noise floor, and this time the noise floor is labelled:
+
+| Legendia's 872-byte decoder against | Longest identical run |
+|---|---:|
+| Symphonia, PlayStation 2, 2004 | **21 bytes** |
+| Rebirth, PlayStation 2, 2004 | **20 bytes** |
+| **Venus & Braves, 2003 — *no decoder in it at all*** | **20 bytes** |
+
+Against **2,420 contiguous identical bytes** of C runtime between Legendia and
+Symphonia, both stamping `MW MIPS C Compiler (2.4.1.01)`. Same compiler, 2,420
+bytes of agreement in the library, twenty-one in the decoder.
+
+And it is the first build to change the *envelope*. Ten years of nine-byte
+headers — `u8` method, `u32` packed, `u32` unpacked — become sixteen bytes with
+**no method byte**, no run escape, and no synthetic dictionary preload. Inside
+that envelope nothing moved: same ring, same mask, same `RING − 18` cursor, same
+`| 0xFF00` refill, same nibble order, same `+3`. **4,508 of 4,508 members decode
+under the unmodified reference decoder**, 1,176,881,049 → 2,098,653,952 bytes.
+
+Somebody in 2005 had this format's specification exactly and did not have its
+source, and the packer that fed them still produced a stream every earlier
+decoder's algorithm reads. Which is the sharpest statement of the thing this
+repository exists to record: the format and the code that implements it are
+two different objects, and only one of them has ever been stable.
+[ps2-talesoflegendia-doc](https://github.com/vs-sr-dev/ps2-talesoflegendia-doc).
+
 ## The result that showed whose format it was
 
 The same 2002 disc carries a second, unrelated game — a promotional build of
@@ -263,6 +295,8 @@ buffer, the PlayStation ones a ring — and on the 2002 PlayStation 2 disc it
 | 2004 *Rebirth* corpus, unmodified reference decoder | **2,851 / 2,851** blocks exact across three nesting levels, 284.9 MB → 1,061.5 MB, [`reports/rebirth-lineage.txt`](reports/rebirth-lineage.txt) |
 | 2002 decoder against 2004 *Symphonia*, on one CPU | 1 identical word in 180, longest identical run **6 bytes** at any alignment, [`reports/gc-lineage.txt`](reports/gc-lineage.txt) |
 | 2004 *Rebirth* decoder against 2004 *Symphonia*, whole executables | **17 bytes**; the same-length C-runtime control from the same file scores **276**, [`reports/rebirth-lineage.txt`](reports/rebirth-lineage.txt) |
+| 2005 *Legendia* corpus, unmodified reference decoder, **new sixteen-byte envelope** | **4,508 / 4,508** blocks exact, 1,176.9 MB → 2,098.7 MB, [ps2-talesoflegendia-doc](https://github.com/vs-sr-dev/ps2-talesoflegendia-doc) |
+| 2005 *Legendia* decoder against its neighbours, on one CPU | **21 bytes** vs Symphonia; the no-decoder control *Venus & Braves* scores **20**, and the C-runtime control **2,420** |
 | 2002 decoder against 1997 and 2000, instruction by instruction | 0 identical words, ~50% opcode sequence; control reproduces 212 bytes, [`reports/ps2-lineage.txt`](reports/ps2-lineage.txt) |
 | Self-test, no image needed — the two dialects' run arithmetic | 4–18 and 19–274 **agree across dialects**, [`reports/selftest.txt`](reports/selftest.txt) |
 | Exhaustive scan of the 6 MiB Super Famicom image | **1,089 blocks**, 115 `$81` + 974 `$83`, every one decoding to its declared length |
@@ -325,6 +359,7 @@ Dependency-free Python 3, one file, no imports beyond `sys`.
 | **Tales of Symphonia** | **PlayStation 2** | **2004** | **yes** — same source, **edited** | [gc-talesofsymphonia-doc](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc) |
 | **Tales of Rebirth** | **PlayStation 2** | **2004** | **yes**, methods 1 / 3 — a **different source**, on both CPUs | [ps2-talesofrebirth-doc](https://github.com/vs-sr-dev/ps2-talesofrebirth-doc) |
 | **Tales of Tactics** | **i-appli (DoJa)** | **2004** | **no** — a Java application; deflate twice, both the platform's | [keitai-talesoftactics-doc](https://github.com/vs-sr-dev/keitai-talesoftactics-doc) |
+| **Tales of Legendia** | **PlayStation 2** | **2005** | **yes** — the same engine from an **unrelated source**, in a **new envelope** | [ps2-talesoflegendia-doc](https://github.com/vs-sr-dev/ps2-talesoflegendia-doc) |
 | Tales of Phantasia | Game Boy Advance | 2003 | no — GBA BIOS `LZ77UnComp` | [snes-talesofphantasia-doc](https://github.com/vs-sr-dev/snes-talesofphantasia-doc) |
 | Tales of Berseria | PC | 2017 | no — zlib inside the TL engine | [pc-talesofberseria-doc](https://github.com/vs-sr-dev/pc-talesofberseria-doc) |
 
@@ -355,6 +390,13 @@ That build also forced the first real revision of the section 7 checklist: the
 `4078` constant scan cannot run on a virtual machine at all, and section 7 now
 carries the variant that can.
 
+The ninth build changes what the question is. *Tales of Legendia* (2005) is
+the first that has the format without having the code — 21 shared bytes against
+2,420 of shared runtime, and a sixteen-byte envelope nobody had used before —
+so the codec was propagating inside the studio as a specification, not as a
+file. That is a weaker kind of inheritance than this repository had been
+describing, and it is the kind that can outlive any particular team.
+
 What is still untested is the 2005 PSP port of *Eternia* and the 2006
 PlayStation 2 remake of *Destiny*. The remake is the interesting one: by then
 the studio had been renamed, and if the codec is still in it, it outlived the
@@ -367,7 +409,7 @@ team's own identity.
 Documentation: [CC BY 4.0](LICENSE-DOCS). `tales_block.py`: [MIT](LICENSE).
 
 *Tales of Phantasia*, *Tales of Destiny*, *Tales of Eternia*, *Tales of
-Destiny 2*, *Tales of Symphonia*, *Tales of Rebirth* and *Venus & Braves* are
-trademarks of BANDAI NAMCO Entertainment.
+Destiny 2*, *Tales of Symphonia*, *Tales of Rebirth*, *Tales of Legendia* and
+*Venus & Braves* are trademarks of BANDAI NAMCO Entertainment.
 This project is unaffiliated with and unendorsed by Bandai Namco, Namco Tales
 Studio, Wolf Team, Nintendo or Sony Interactive Entertainment.

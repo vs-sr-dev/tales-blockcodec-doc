@@ -321,6 +321,7 @@ from the 1997 code only where the 1997 code is wrong.
 | **Tales of Symphonia** | **PlayStation 2** | **2004** | **this format** — the same source, *edited* |
 | **Tales of Rebirth** | **PlayStation 2** | **2004** | **this format**, methods 1 / 3 — a *different* source again, on both CPUs |
 | **Tales of Tactics** | **i-appli (DoJa)** | **2004** | **no** — a Java application; deflate, twice, both the platform's |
+| **Tales of Legendia** | **PlayStation 2** | **2005** | **this format**, one method — the *same engine*, an **unrelated source**, and a **new envelope** |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
 
 ### The 2000 build is not a reimplementation
@@ -559,6 +560,95 @@ quirk that existed in one routine on one processor in 2002 is the convention on
 both processors in late 2004.
 [ps2-talesofrebirth-doc](https://github.com/vs-sr-dev/ps2-talesofrebirth-doc).
 
+### The 2005 build separates the format from the code
+
+*Tales of Legendia* is the ninth build and the first on which two things that
+had always moved together come apart: the format is here in full and the source
+is not, and the *container around the format* has changed for the first time
+since 1995.
+
+The shortcut works, and it answers with the oldest constant. One `4078` in
+`SLPS_255.33`, and it is `ring_init`: an inline byte loop unrolled by eight,
+ring base `0x004A0AE0`, mask 4095, cursor at `RING − 18`. That is the 1997–2003
+mechanism, so the count is now four builds and four ways to clear one array:
+
+| Build | Year | Mechanism | Constant |
+|---|---|---|---|
+| Destiny, Eternia, Destiny 2, Symphonia GC | 1997–2003 | inline byte loop | **4078** |
+| Symphonia, PlayStation 2 | 2004 | bespoke quadword `bzero` | **4080** |
+| Rebirth | 2004 | library `memset`, from a factored `ring_init` | **4079** |
+| **Legendia** | **2005** | **inline byte loop** | **4078** |
+
+But it did not get there by inheriting anything. 872 bytes of Legendia's decoder,
+searched at any alignment through whole executables:
+
+| Legendia's **decoder** against | Longest identical run |
+|---|---:|
+| Symphonia, PlayStation 2, 2004 | **21 bytes** |
+| Rebirth, PlayStation 2, 2004 | **20 bytes** |
+| Destiny 2, PlayStation 2, 2002 | 16 bytes |
+| **Venus & Braves, 2003 — *the negative control*** | **20 bytes** |
+
+The last row is what makes the others readable, and it cost one extra argument.
+`VENUS.ELF` is this document's own demonstration of an executable with no
+decoder in it at all. Legendia's decoder resembles its nearest sibling exactly
+as much as a file containing no decoder does.
+
+And byte equality was available, demonstrated twice. 872 bytes of Legendia's
+*own C runtime*, same needle length, same tool, saturates against Symphonia —
+widening the needle until the answer stops growing gives **2,420 contiguous
+identical bytes**. Both executables carry `.comment` reading
+`MW MIPS C Compiler (2.4.1.01)`, so this is not a toolchain difference being
+mistaken for a source difference: it is the same stamped compiler, 2,420 bytes
+of agreement in the library, and twenty-one in the decoder. Separately,
+Rebirth's own 932-byte runtime needle scores **276** against Legendia — the
+same figure it scores against Symphonia — so **four PlayStation 2 titles across
+thirty-five months link the same runtime objects byte for byte**.
+
+What changed is the envelope. Every build from 1995 to 2004 wraps its data in
+the nine-byte header of section 1, whose first byte is the method. Legendia
+does not:
+
+```
+1995-2004                       2005
++0  u8  method                  +0x00  "CPS "
++1  u32 packed                  +0x04  u32 packed, including the header
++5  u32 unpacked                +0x08  u32 unpacked
+                                +0x0C  u32 zero, on every member
++9  stream                      +0x10  stream
+```
+
+Sixteen bytes and **no method byte at all**, so the dispatch this document has
+described for nine years has nowhere to live. There is no run escape — no `+19`
+anywhere in the routine — and a stored member is recognised instead by
+`packed − 16 == unpacked`, which holds to the byte on 3,353 of them.
+
+Two more things are gone from the decoder and one of them matters to the packer.
+The routine is a **resumable state machine**, keeping cursor, mask, control
+register, saved token byte and a `0..3` state word in five `gp`-relative
+globals so it can be handed a partial buffer and called again; nothing else in
+this corpus is built that way. And `ring_init` **does not write the synthetic
+preload**. It clears 4,078 bytes and returns — no 256-iteration pattern loops,
+no `(i, 0x00)` and `(i, 0xFF)` pairs. Section 4 measured that preload being read
+by every one of Eternia's 20,085 blocks; here it does not exist, which means the
+*packer* stopped emitting references into it as well, or nothing would decode.
+
+Everything else is untouched, and it is checkable: 4,096-byte ring, `& 0x0FFF`,
+control bits LSB first with `1` = literal, refill as `byte | 0xFF00`, the
+twelve-bit reference with its high four bits in the *high* nibble of the second
+token byte, `length = nibble + 3` over 3 to 18, and the loop driven by the packed
+size. **4,508 of 4,508 members decode to their declared length**, 1,176,881,049
+packed to 2,098,653,952 unpacked — 3,078 in the six `AFS` archives and 1,430
+more inside a gigabyte-sized file nothing on the disc refers to.
+
+So the reading this document has carried since 2004 needs one clause added. It
+was: by then there was no longer one copy of the *source*, and the format did not
+notice. Legendia says the format did not need the source at all. Somebody in 2005
+had the algorithm exactly — every constant, every nibble, the `+3` — and did not
+have the file, and built a different container around it, and the packer that
+fed it still produced a stream the reference decoder reads without a branch.
+[ps2-talesoflegendia-doc](https://github.com/vs-sr-dev/ps2-talesoflegendia-doc).
+
 ### The boundary tested on a single disc
 
 The *Tales of Destiny 2* disc is the sharpest negative control this
@@ -678,10 +768,15 @@ structure the platform recognises.
 ### Finding the decoder, rather than the data
 
 There is a shortcut worth knowing, and it worked first try on the PlayStation
-2. **Scan the executable for the immediates 4078 and 4079.** They are
-`RING − 18` and `RING − 17`, they appear as `addiu`/`slti` immediates in every
-PlayStation-dialect decoder found so far, and no other part of a game has a
-reason to load 4,078. On *Tales of Destiny 2* that filter returned seven sites
+2. **Scan the executable for the immediates 4078, 4079 and 4080.** The first
+two are `RING − 18` and `RING − 17`; the third is 4,078 rounded up to a
+multiple of sixteen. Until 2004 only 4078 was needed, because every build
+cleared the ring with an inline loop bounded by it. Since then the constant has
+not been stable — Symphonia's PlayStation 2 port uses 4080, Rebirth 4079, and
+Legendia 2005 goes back to 4078 — so ask for all three at once and **print the
+immediate for every hit**, because which one answers tells you which mechanism
+the build uses and therefore which copy of the source it descends from. No
+other part of a game has a reason to load 4,078. On *Tales of Destiny 2* that filter returned seven sites
 across two files and both decoders were within a hundred bytes of one of them.
 
 **It survives a change of instruction set.** On PowerPC the constant appears
@@ -699,6 +794,51 @@ Braves* was ruled out without decoding anything — and how the 2004 build's two
 I/O processor images were ruled out in 2004. On *Tales of Rebirth* it returned
 eight sites in the main executable and five in `BOOT.IRX`, and **none at all** in
 `IOPRP300.IMG`, which is nineteen stock Sony modules.
+
+### When the constant is there and the blocks are not
+
+Steps 1 and 2 assume the nine-byte header is the thing to look for, and for
+eight builds it was. On the ninth it is not, and the failure is silent: *Tales
+of Legendia* (PlayStation 2, 2005) contains the decoder — one `4078`, the ring,
+the mask, the `+3`, all of it — and a scan for the header shape over its data
+returns **zero blocks in both dialects**, because the game wraps its streams in
+a *sixteen*-byte container of its own with no method byte in it.
+
+So the two halves of the check can disagree, and when they do, **the constant
+scan is the one to believe**. The header scan can only find an envelope it
+already knows; the constant is in the code and the code is what you are asking
+about.
+
+The order that works:
+
+1. **Run the constant scan first**, not second. It is cheaper than a decode
+   sweep and it fails in the informative direction: no 4078/4079/4080 anywhere
+   means no decoder, and that is the strong negative that ruled out *Venus &
+   Braves* and the 2004 I/O processor images.
+2. **If it hits, disassemble the hit before scanning any data.** Forty
+   instructions is enough to read off the ring base, the mask, the initial
+   cursor and the token shape, and to see whether the routine takes a *block* or
+   takes `(source, destination, length)`. If it takes the latter there is no
+   nine-byte header on that disc and the header scan will return zero however
+   long you run it.
+3. **Then find the envelope by looking at what calls the routine**, or — faster
+   — by looking at what the container's members actually start with. Legendia's
+   answered itself: its archive members are named `*.cps` and they begin
+   `CPS `.
+4. **Do not treat the preload as given.** Every PlayStation-family build from
+   1997 to 2004 fills the ring with 3,840 synthetic bytes before reading a
+   token. Legendia's `ring_init` clears 4,078 bytes and returns. Since section 4
+   also warns that a wrong dictionary still produces the *right length*, the
+   only way to tell which variant a disc uses is to decode something that ought
+   to be a recognisable structure and look at it. On Legendia the empty ring
+   produces a parseable index table whose length the disc's own size table
+   agrees with; the preloaded ring does not.
+
+The general lesson is worth stating apart from the title that produced it. This
+document's own section 6 has always separated "the format" from "the code",
+and the checklist quietly conflated them by making the on-disc header the test
+for both. **A build can have the algorithm without the source and without the
+container.** Ask the code first.
 
 ### When the target is a virtual machine, the constant scan does not run
 
@@ -832,7 +972,16 @@ instead. See
   the split is still 1995/1997. The eighth build tested, *Tales of Tactics*
   (i-appli, 2004), is the first that does not contain the format at all — and it
   could not have, being a Java application — so it adds no dialect and removes
-  no doubt. What is left to test is the 2005 PSP port of *Eternia* and the 2006
+  no doubt. The ninth, *Tales of Legendia* (PlayStation 2, 2005), is the first
+  that changes the **envelope** — sixteen bytes and no method byte, so the
+  dispatch this document describes has nowhere to live — while leaving the token
+  stream inside it bit-identical in dialect: same nibble order, same `+3`, same
+  ring, 4,508 of 4,508 members read by the unmodified reference decoder. It
+  drops the run escape entirely, which is a *narrowing* of the dialect rather
+  than a third one, and it drops the synthetic preload, which is the first
+  change to the dictionary since 1997. Two dialects, nine builds, five
+  platforms, both byte orders, ten years, and the split is still 1995/1997.
+  What is left to test is the 2005 PSP port of *Eternia* and the 2006
   PlayStation 2 remake of *Destiny*.
 * **~~Was the source ever edited after 1997?~~** *Answered, and then
   re-answered.* The first answer was "yes, once, in 2004". *Tales of Rebirth*,
@@ -907,16 +1056,50 @@ instead. See
   per-archive run-escape setting is per-archive there too, and sharply: 93.5%
   method 3 among top-level members against 58.1% inside `SCPK` bundles, on one
   disc from one packer run.
-* **~~Where is the boundary of the format?~~** *Narrowed once more, from
-  outside the console line.* The boundary was already known not to be the
-  company (*Venus & Braves*), the console (both PlayStation 2 games on one
-  disc) or the series name (*Berseria*). *Tales of Tactics* removes the last
-  ambiguity by being a *Tales* title, from the same publisher, **built the day
-  Rebirth was released**, that contains no trace of the format across 971,959
-  bytes and 6,286 integer constants — and whose own party table names the leads
-  of the five titles that do contain it. The boundary is **the console C
-  codebase**, and it is a boundary of *inheritance* rather than of choice: a
-  Java application on a phone had nothing to inherit. Section 6.
+  The 2005 *Legendia* disc adds the largest change yet, and it is a change to
+  the packer's *input contract* rather than to its output. **The synthetic
+  preload is gone**: that build's `ring_init` clears 4,078 bytes and writes no
+  `(i, 0x00)` / `(i, 0xFF)` pairs, so the packer cannot have emitted a single
+  reference into the region section 4 measured Eternia reading 1,039,128 times.
+  Both ends changed together, which is one more thing the packer and the
+  decoders still agreed about after the decoders stopped sharing code.
+  It also **restores the stored path in bulk** — 3,353 raw members, 614.5 MB,
+  after *Rebirth* had zero in 2,851 — and it does so categorically rather than
+  by size: every one of the 2,957 data members in that disc's battle archive is
+  stored, on a disc whose map data compresses to 58.7%. **Nothing expands**, in
+  4,508 members, which now holds across every disc examined. The smallest block
+  is 56 packed bytes producing 128; the largest is **3,864,151 packed producing
+  6,162,880**, nearly four times the 2003 and 2004 ceilings, so whatever lifted
+  the ~30 KB limit between 2002 and 2003 has kept lifting.
+* **Where is the boundary of the format?** *Narrowed from outside the console
+  line, then complicated from inside it.* The boundary was already known not to
+  be the company (*Venus & Braves*), the console (both PlayStation 2 games on one
+  disc) or the series name (*Berseria*). *Tales of Tactics* appeared to settle
+  it: a *Tales* title, same publisher, **built the day Rebirth was released**,
+  with no trace of the format across 971,959 bytes and 6,286 integer constants,
+  and whose own party table names the leads of the five titles that do contain
+  it. The boundary was stated as **the console C codebase**, a boundary of
+  *inheritance* rather than choice — a Java application on a phone had nothing
+  to inherit.
+
+  *Tales of Legendia* (2005) keeps that statement and takes the mechanism out of
+  it. Here is a build that **did** inherit — same series, same console, same
+  studio, eight months after *Rebirth* — and what it inherited was not code.
+  Its decoder shares **21 bytes** with *Symphonia*'s and **20** with
+  *Rebirth*'s, against **20** for an executable that contains no decoder at all,
+  while 2,420 contiguous bytes of C runtime are identical between the same pair
+  of files and both stamp the same compiler. It then wrapped the format in a
+  container that had never existed before: sixteen bytes, no method byte, no run
+  escape, no synthetic preload. And 4,508 of 4,508 members decode.
+
+  So "inheritance" has to mean something weaker than it did. What crossed to
+  this build was **the specification, not the file**: every constant, the nibble
+  order, the `| 0xFF00` refill, the `RING − 18` cursor and the `+3`, reproduced
+  exactly by someone who plainly did not have the source and did not keep the
+  envelope. The boundary is still the *Tales* console codebase; what the corpus
+  can no longer claim is that the codebase propagated the codec by copying code.
+  For at least one build it propagated it as knowledge. Section 6.
+  [ps2-talesoflegendia-doc](https://github.com/vs-sr-dev/ps2-talesoflegendia-doc),
   [keitai-talesoftactics-doc](https://github.com/vs-sr-dev/keitai-talesoftactics-doc).
 * **Was the format ever ported to a virtual machine?** Not in the two
   Java-family builds examined. *Tales of Tactics* (i-appli, 2004) and *Tales of
