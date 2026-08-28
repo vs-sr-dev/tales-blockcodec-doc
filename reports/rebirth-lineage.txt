@@ -1,0 +1,123 @@
+Tales of Rebirth (PlayStation 2, SLPS-25450, 2004) -- decoder lineage
+Produced by ps2-talesofrebirth-doc/tools/prefix_scan.py.  Copied here so
+the corpus's own claim about the 2004 fork is checkable from this
+repository alone.
+
+### Longest identical byte run, at any alignment, found without being told where to look
+
+## POSITIVE CONTROL
+## The corpus reports 212 identical bytes between the 1997 and 2000 decoders,
+## measured by aligning two known addresses.  This tool is handed only the 1997
+## address and searches the whole 2000 executable; it must reproduce 212.
+
+needle  SLPS_011.00  va 0x80150BB0  file 0xB13B0  560 bytes
+longest run of those bytes appearing anywhere in:
+  SLPS_030.50          212 bytes  (needle+0, SLPS_030.50+0x13D04)
+
+## THE QUESTION: Rebirth's decoder cluster (ring_init + method 1 + method 3,
+## 932 bytes from 0x0010CDA8) against every other build in the corpus.
+
+needle  SLPS_254.50  va 0x0010CDA8  file 0xDDA8  932 bytes
+longest run of those bytes appearing anywhere in:
+  SLPS_254.00           17 bytes  (needle+261, SLPS_254.00+0x1A25DD)
+  SLPS_251.72           13 bytes  (needle+263, SLPS_251.72+0x3484F)
+  SLPS_030.50           12 bytes  (needle+264, SLPS_030.50+0x5A988)
+  SLPS_011.00            9 bytes  (needle+352, SLPS_011.00+0x82038)
+control: an unrelated routine of the same length, va 0x001BFC34
+  SLPS_254.00          276 bytes  (needle+544, SLPS_254.00+0x254C0)
+  SLPS_251.72          288 bytes  (needle+544, SLPS_251.72+0x91A04)
+  SLPS_030.50           13 bytes  (needle+439, SLPS_030.50+0x33)
+  SLPS_011.00           13 bytes  (needle+439, SLPS_011.00+0x33)
+
+## The control above is 932 bytes of Rebirth's C runtime taken from the same
+## executable and measured the same way.  It is the proof that byte equality
+## was available: the runtime matches, the decoder does not.
+
+## THE I/O PROCESSOR COPY: Rebirth's BOOT.IRX decoder against the 2002 one.
+## Both are R3000A, so byte equality was available here too.  The control is
+## 900 bytes of BOOT.IRX's own module boilerplate.
+
+needle  BOOT.IRX  va 0x000034D4  file 0x3574  900 bytes
+longest run of those bytes appearing anywhere in:
+  FILESYS.IRX           47 bytes  (needle+612, FILESYS.IRX+0x25F8)
+  SLPS_254.50           16 bytes  (needle+476, SLPS_254.50+0x96C24)
+  SLPS_254.00           15 bytes  (needle+857, SLPS_254.00+0xA2895)
+  SLPS_251.72           15 bytes  (needle+857, SLPS_251.72+0x3005)
+control: an unrelated routine of the same length, va 0x00000000
+  FILESYS.IRX           46 bytes  (needle+478, FILESYS.IRX+0x25F6)
+  SLPS_254.50           15 bytes  (needle+201, SLPS_254.50+0x12DD)
+  SLPS_254.00           15 bytes  (needle+201, SLPS_254.00+0xA2895)
+  SLPS_251.72           15 bytes  (needle+201, SLPS_251.72+0x3005)
+
+================================================================
+The census, with the reference decoder from this repository, unmodified:
+
+--- top level, container index
+    method 1 lzss                     85  (6.5%)
+    method 3 lzss + run escape      1227  (93.5%)
+    decode to declared length      1312 of 1312
+    packed / unpacked / ratio      83063497 / 255251086 / 3.073x
+    largest packed block           1015400  (DAT.BIN#21)
+    smallest packed block          438  (DAT.BIN#306)
+    blocks that did not shrink     0
+
+--- inside .BIN bundles
+    method 1 lzss                      2  (3.9%)
+    method 3 lzss + run escape        49  (96.1%)
+    decode to declared length      51 of 51
+    packed / unpacked / ratio      98807 / 321780 / 3.257x
+    largest packed block           24750  (DAT.BIN#23[4])
+    smallest packed block          209  (DAT.BIN#23[38])
+    blocks that did not shrink     0
+
+--- inside SCPK bundles
+    method 1 lzss                    624  (41.9%)
+    method 3 lzss + run escape       864  (58.1%)
+    decode to declared length      1488 of 1488
+    packed / unpacked / ratio      201691293 / 805899102 / 3.996x
+    largest packed block           662862  (DAT.BIN#10258[0])
+    smallest packed block          59  (DAT.BIN#10198[10])
+    blocks that did not shrink     0
+
+=== WHOLE DISC
+    method 1 lzss                    711  (24.9%)
+    method 3 lzss + run escape      2140  (75.1%)
+    decode to declared length      2851 of 2851
+    packed / unpacked / ratio      284853597 / 1061471968 / 3.726x
+    largest packed block           1015400  (DAT.BIN#21)
+    smallest packed block          59  (DAT.BIN#10198[10])
+    blocks that did not shrink     0
+
+================================================================
+The 4078/4079 shortcut on every image of that disc:
+
+### The 4078/4079 shortcut on every image of this disc
+
+--- SLPS_254.50
+_work/x/SLPS_254.50, mips, 320334 words scanned
+
+ADDRESS      WORD       FORM        IMM  ROUTINE
+0x0000DA28   0x24020FEE addiu      4078  0x0000D8F0 (+78 words)
+0x0000DA30   0x24020FEF addiu      4079  0x0000D8F0 (+80 words)
+0x0000DCC8   0x24020FEE addiu      4078  0x0000DB54 (+93 words)
+0x0000DCCC   0x24020FEF addiu      4079  0x0000DB54 (+94 words)
+0x0000DDB4   0x24060FEF addiu      4079  0x0000DD6C (+18 words)
+0x0000DEE8   0x24070FEE addiu      4078  0x0000DEB8 (+12 words)
+0x0000E000   0x24080FEF addiu      4079  0x0000DFD0 (+12 words)
+0x000C6548   0x66040FEF daddiu     4079  0x000C64E4 (+25 words)
+
+8 sites
+
+--- IOPRP300.IMG
+_work/x/IOPRP300.IMG, mips, 69576 words scanned
+
+no 4078 or 4079 immediate anywhere in this image.
+by section 7 of the codec specification that is evidence the
+decoder is not present, not merely that it was not found.
+
+--- BOOT.IRX
+_work/x/BOOT.IRX, mips, 16357 words scanned
+
+ADDRESS      WORD       FORM        IMM  ROUTINE
+0x0000340C   0x24020FEE addiu      4078  0x000031B8 (+149 words)
+0x00003420   0x24020FEF addiu      4079  0x000031B8 (+154 words)

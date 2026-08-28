@@ -319,6 +319,7 @@ from the 1997 code only where the 1997 code is wrong.
 | Tales of Phantasia | Game Boy Advance | 2003 | **no** — GBA BIOS `LZ77UnComp` / `RLUnComp` |
 | **Tales of Symphonia** | **GameCube** | **2003** | **this format**, methods 1 / 3 — on a *big-endian* machine |
 | **Tales of Symphonia** | **PlayStation 2** | **2004** | **this format** — the same source, *edited* |
+| **Tales of Rebirth** | **PlayStation 2** | **2004** | **this format**, methods 1 / 3 — a *different* source again, on both CPUs |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
 
 ### The 2000 build is not a reimplementation
@@ -470,6 +471,93 @@ against 1,520 + 1,176, with 2 identical words out of 276 — where the GameCube'
 two copies are byte for byte the same. See
 [gc-talesofsymphonia-doc](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc).
 
+### By late 2004 there was more than one copy of the source
+
+The 2004 result above had to be hedged, because `SLPS_254.00` carries a
+`.comment` reading `MW MIPS C Compiler (2.4.1.01)` and `SLPS_251.72` carries no
+compiler string at all, and a change of toolchain explains a lot of drift by
+itself. *Tales of Rebirth* removes the hedge, because it supplies the control
+that was missing.
+
+Same studio, same R5900, and **three months** after Symphonia's PlayStation 2
+port — that disc's volume is stamped 2004-08-17 and Rebirth's 2004-11-17. Taking
+932 contiguous bytes of Rebirth's decoder (its shared `ring_init` plus both
+method cores) and searching *whole executables* for the longest identical run at
+any alignment:
+
+| Rebirth's decoder against | longest identical run |
+|---|---:|
+| Symphonia, PlayStation 2, 2004 | **17 bytes** |
+| Destiny 2, PlayStation 2, 2002 | 13 bytes |
+| Eternia, PlayStation, 2000 | 12 bytes |
+| Destiny, PlayStation, 1997 | 9 bytes |
+
+and then the same measurement, same needle length, on **932 bytes of Rebirth's
+own C runtime** taken from the same executable:
+
+| Rebirth's C runtime against | longest identical run |
+|---|---:|
+| Symphonia, PlayStation 2, 2004 | **276 bytes** |
+| Destiny 2, PlayStation 2, 2002 | **288 bytes** |
+| Eternia, PlayStation, 2000 | 13 bytes |
+| Destiny, PlayStation, 1997 | 13 bytes |
+
+All three PlayStation 2 titles link the same C runtime objects byte for byte.
+Byte equality was therefore not merely available in principle, it is
+*demonstrated* between exactly the pair of files whose decoders share nothing.
+Two executables that agree for 276 bytes of `memset` and string code agree for
+seventeen bytes of decoder. The toolchain cannot be doing that.
+
+And the constant says the same thing a third way. Every build from 1997 to 2003
+clears the ring with an inline byte loop bounded by 4,078. Symphonia 2004 calls a
+hand-written quadword `bzero` with 4,080. Rebirth 2004 calls the **ordinary C
+library `memset`** with **4,079**, out of a routine neither of the others has —
+a factored `ring_init` that both method variants share, which is why it has to
+clear enough for the higher of the two cursors rather than the lower:
+
+```
+2002, inline                     2004 Symphonia, bespoke bzero
+  addiu a0, zero, 4078             addiu a1, zero, 4080
+  sb    zero, 0(v1)                jal   0x001DF090
+  slt   v0, t1, a0                        srl a1, a1, 4
+  bne   v0, zero, ...                     sq  zero, 0(a0)
+
+2004 Rebirth, library memset
+  addiu sp, sp, -32
+  daddu a1, zero, zero        ; fill 0
+  addiu a2, zero, 4079        ; length
+  jal   0x001BFC34            ; generic memset, with a byte fallback
+  daddu s0, a0, zero
+```
+
+**`4080` does not appear in Rebirth's executable at all** — one `andi` mask over
+204,024 instruction words, and nothing else. The signature this document named
+as "the source fingerprint, independent of the compiler" is absent from a build
+three months later at the same studio on the same CPU.
+
+The I/O processor tells the same story. Rebirth puts the decoder *back* on the
+IOP, which 2004 Symphonia had dropped; `BOOT.IRX` and 2002's `FILESYS.IRX` are
+both R3000A, so byte equality was available there too, and the longest identical
+run between them is **47 bytes against a control of 46** — the module boilerplate
+any two IRX files share, and nothing more.
+
+So the 2004 finding needs restating. It is not *the source was edited once in
+2004*. It is that **by 2004 there was no longer one copy of the source to
+edit**: three PlayStation 2 builds inside thirty months clear the same array
+three different ways with three different constants through three different
+mechanisms, while every bit of the on-disc format stays put and the reference
+decoder reads all of them without a branch. Each title had its own copy. What
+they still had in common was the format and the packer.
+
+One thing did survive intact, and it is the odd one. In 2002 the *Destiny 2*
+I/O-processor copy was the only place in four titles where the on-disc method
+byte was not used directly — it dispatched on internal kinds **2 and 4** instead
+of 1 and 3. On Rebirth **both** copies do that, on both processors: the header
+state machine reads the method byte, adds one, and compares against 2 and 4. A
+quirk that existed in one routine on one processor in 2002 is the convention on
+both processors in late 2004.
+[ps2-talesofrebirth-doc](https://github.com/vs-sr-dev/ps2-talesofrebirth-doc).
+
 ### The boundary tested on a single disc
 
 The *Tales of Destiny 2* disc is the sharpest negative control this
@@ -563,7 +651,39 @@ instruction sets is
 It cuts the other way just as well. The absence of `4078` across a whole
 executable is strong evidence the decoder is not there, which is how *Venus &
 Braves* was ruled out without decoding anything — and how the 2004 build's two
-I/O processor images were ruled out in 2004.
+I/O processor images were ruled out in 2004. On *Tales of Rebirth* it returned
+eight sites in the main executable and five in `BOOT.IRX`, and **none at all** in
+`IOPRP300.IMG`, which is nineteen stock Sony modules.
+
+### Comparing two builds: search the whole file, and control with the runtime
+
+Two refinements, both learned in 2004 and both cheap.
+
+**Search the whole executable, not a window.** Aligning two known addresses and
+comparing them — what `decoder_diff.py` and `decoder_lineage.py` do — answers a
+narrower question than it looks like. It cannot tell "recompiled and moved" from
+"not present", and it cannot find a shared prefix that ended up inside some other
+routine. Take *N* bytes of A and find the longest run of them appearing
+**anywhere** in B, at any alignment, without being told where to look. A rolling
+hash with a binary search on the length does this on a four-megabyte executable
+in under a second. The instrument is validated by the control this document
+already has: handed only 1997's decoder address and the whole of 2000's
+executable, it must return **212**, and it does.
+[`prefix_scan.py`](https://github.com/vs-sr-dev/ps2-talesofrebirth-doc/blob/main/tools/prefix_scan.py).
+
+**Control with the C runtime, not with a random routine.** A negative byte
+result is worth much more if you can show byte equality was available at all.
+Take a needle *of the same length* from the two builds' shared C library —
+`memset`, `strlen`, the SIMD string routines — and run the identical
+measurement. If the runtime matches for hundreds of bytes and the decoder
+matches for tens, the toolchain is excluded by measurement rather than by
+argument. This is the test that turned the 2004 result from "part toolchain,
+part edit" into "the source had forked": 276 and 288 bytes of runtime against 17
+of decoder, between the same pairs of files.
+
+Do this *before* reaching for `.comment`. A compiler string is a good
+explanation when it is present, but it is absent in three of the four
+PlayStation-family executables here, and the runtime control works regardless.
 
 ### What does *not* work: comparing routines across instruction sets
 
@@ -590,12 +710,30 @@ instead. See
   (2002) settled that too. The last plausible place for one was a machine of
   the opposite byte order, and *Tales of Symphonia* (GameCube, 2003) is that
   machine: the decoder is there four times as PowerPC, the nibble order is
-  unchanged, and **the nine-byte header is still little-endian**. Two dialects,
-  six builds, four consoles, both byte orders, nine years, and the split is
-  still 1995/1997. What is left to test is the 2005 PSP port of *Eternia* and
-  the 2006 PlayStation 2 remake of *Destiny*.
-* **~~Was the source ever edited after 1997?~~** *Answered, yes — once, in
-  2004.* Every build from 1997 to 2003 clears the dictionary with an inline
+  unchanged, and **the nine-byte header is still little-endian**. And the
+  strongest test of all has now been run: *Tales of Rebirth* (2004) is the first
+  title here whose decoder demonstrably does **not** descend from the same source
+  file as its neighbour's, and it still produces **2,851 of 2,851** blocks the
+  unmodified reference decoder reads. A fork of the code did not fork the format.
+  Two dialects, seven builds, four consoles, both byte orders, nine years, and
+  the split is still 1995/1997. What is left to test is the 2005 PSP port of
+  *Eternia* and the 2006 PlayStation 2 remake of *Destiny*.
+* **~~Was the source ever edited after 1997?~~** *Answered, and then
+  re-answered.* The first answer was "yes, once, in 2004". *Tales of Rebirth*,
+  three months after *Symphonia*'s PlayStation 2 port and on the same R5900,
+  shares **17 bytes** with it — while 932 bytes of the two builds' shared C
+  runtime, measured identically, match for **276**. Byte equality was available
+  and demonstrated; the decoder did not take it. Rebirth clears the dictionary a
+  third way again — a library `memset` with **4,079**, from a factored
+  `ring_init` neither other build has — and contains no `4080` anywhere. So the
+  answer is not that the source was edited once. It is that **by 2004 there was
+  no longer one copy of the source**: three PlayStation 2 builds in thirty
+  months, three dictionary clears, three constants, one unchanged on-disc format.
+  Section 6. The original 2004 statement follows, unaltered, because it is still
+  the correct reading of that pair on its own:
+
+* **~~Was the 2004 Symphonia build edited?~~** *Answered, yes.* Every build
+  from 1997 to 2003 clears the dictionary with an inline
   byte loop bounded by 4,078. *Tales of Symphonia*'s PlayStation 2 port (2004)
   calls a quadword `bzero` with 4,080 instead — 4,078 rounded up to a multiple
   of sixteen so the Emotion Engine's 128-bit store can be used. On the same CPU
@@ -625,7 +763,10 @@ instead. See
 
 * **What produced the blocks?** Everything else here is about the decoders. The
   packer, which is where the shared constants actually live, has left no trace
-  in any shipped image beyond its output. Four corpora now show its habits —
+  in any shipped image beyond its output — and it is now the **only** thing in
+  this lineage that provably did not fork. The decoders diverged per title by
+  2004 and the format did not move a bit, so something was still normalising the
+  output across titles that no longer shared decoder source. Four corpora now show its habits —
   it emits stored blocks below roughly 30 bytes (2000 only), it never expands,
   and on five blocks out of 21,054 it overshoots a trailing run by exactly one
   byte — but the tool itself remains invisible. The 2003 GameCube corpus adds
@@ -639,6 +780,17 @@ instead. See
   (8,040 of 8,142 blocks inside its bundles are method 3), and tiny members
   are no longer wrapped in a method-0 header at all — they are simply left raw
   with no header, which the 2000 packer never did.
+  The 2004 *Rebirth* disc adds three more. **The stored path is gone entirely**:
+  zero method-0 blocks in 2,851, against 21 in 2002 and 969 in 2000, and the
+  smallest block on the disc is **59 packed bytes and method 1** — the packer now
+  compresses payloads the 2000 version would have stored. **Nothing expanded**:
+  zero of 2,851 have packed ≥ unpacked. And **the thirty-fold ceiling held**: the
+  largest block is **1,015,400 packed bytes**, next to the GameCube's 1,007,213,
+  so whatever lifted the ~30 KB limit between 2002 and 2003 was not a GameCube
+  decision and had not reverted eighteen months later on another console. The
+  per-archive run-escape setting is per-archive there too, and sharply: 93.5%
+  method 3 among top-level members against 58.1% inside `SCPK` bundles, on one
+  disc from one packer run.
 * **Why the nibble swap?** No functional reason has been found. It costs
   nothing either way and it is the sort of thing that changes when code is
   rewritten from a description rather than ported line by line — which, if
@@ -668,10 +820,15 @@ instead. See
   the same length — 1,104 + 768 against 1,520 + 1,176, with 2 identical words
   out of 276 — the second far more heavily unrolled than the first.
 * **Where the decoder runs.** In 2002 it ran on both processors. In 2004
-  neither I/O processor image contains a `4078` immediate at all: decompression
-  moved entirely onto the main CPU while the I/O processor took up CRI's `ROFS`
-  reader. Whether that was a decision about the codec or a consequence of
-  changing file system middleware is not answerable from the discs.
+  *Symphonia*'s two I/O processor images contain no `4078` immediate at all:
+  decompression moved entirely onto the main CPU while the I/O processor took up
+  CRI's `ROFS` reader. Three months later *Rebirth* puts it back — five sites in
+  `BOOT.IRX`, its single custom I/O processor module, and none in the stock Sony
+  bundle — and that disc carries no CRI middleware at all. Two data points now,
+  pointing the same way: where `ROFS` ran on the I/O processor the codec left it,
+  and where the game read its own containers the codec stayed. Whether that is a
+  decision about the codec or a consequence of the file system is still not
+  answerable from the discs, but it is no longer a single observation.
 * **Comparing across instruction sets.** The opcode-sequence method that
   carried the 2002 result works because R3000A and R5900 share a mnemonic
   vocabulary. Section 7 records the attempt to generalise it to PowerPC and its

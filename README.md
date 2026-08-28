@@ -6,7 +6,8 @@ still shipping in 2000 — by then not merely the same format but, for 212
 bytes, literally the same machine code — still shipping in 2002 on the
 PlayStation 2, on a disc that also proves it was never Namco's format at all,
 and still shipping in 2003 on a **big-endian** console with its nine-byte
-header unturned. In 2004 somebody finally edited it.
+header unturned. By 2004 there was more than one copy of the source — and the
+format still did not move.
 
 → **[tales-block-codec.md](tales-block-codec.md)** — the specification
 → **[tales_block.py](tales_block.py)** — the reference decoder, both dialects
@@ -138,6 +139,39 @@ Seven years of "the same source, recompiled" end here. And the GameCube build a
 year *earlier* still clears the dictionary the 2002 way, so it is 2004 that
 departs, not 2003.
 
+## The result that showed the source had forked
+
+*Tales of Symphonia*'s 2004 PlayStation 2 port shares six bytes with the 2002
+build on the same CPU, and this repository attributed part of that to a change
+of compiler because there was no way to separate the two. *Tales of Rebirth*
+separates them. Same studio, same R5900, **three months later** — Symphonia's
+volume is stamped 2004-08-17 and Rebirth's 2004-11-17 — and the same
+measurement run twice on the same pair of files, once on the decoder and once on
+932 bytes of the C runtime taken from the same executable:
+
+| Rebirth's 932-byte needle | vs Symphonia 2004 | vs Destiny 2 2002 |
+|---|---:|---:|
+| the **decoder** | **17 bytes** | 13 bytes |
+| the **C runtime** | **276 bytes** | **288 bytes** |
+
+All three PlayStation 2 titles link the same runtime objects byte for byte. Byte
+equality was not merely possible, it is *demonstrated between exactly the files
+whose decoders share nothing*. The toolchain is excluded by measurement.
+
+And the constant agrees. 1997–2003 clear the dictionary with an inline byte loop
+bounded by **4078**; Symphonia 2004 calls a bespoke quadword `bzero` with
+**4080**; Rebirth 2004 calls the ordinary library `memset` with **4079**, from a
+factored `ring_init` that neither of the others has — and **`4080` appears
+nowhere in its executable**. Three builds in thirty months, three ways to clear
+one array.
+
+The format did not notice. **2,851 of 2,851** blocks on Rebirth's disc decode
+under the unmodified reference decoder, at three levels of container nesting,
+285 MB → 1,061 MB. A fork of the code did not fork the format — which makes the
+packer, still invisible after nine years, the only thing in this lineage that
+provably never forked.
+[ps2-talesofrebirth-doc](https://github.com/vs-sr-dev/ps2-talesofrebirth-doc).
+
 ## The first direct measurement of the packer
 
 The packer has never left anything in a shipped image but its output. In 2003
@@ -222,7 +256,9 @@ buffer, the PlayStation ones a ring — and on the 2002 PlayStation 2 disc it
 |---|---|
 | 2002 PlayStation 2 corpus, unmodified reference decoder | **9,469 / 9,469** blocks exact, 329 MB → 1,413 MB, [`reports/ps2-census.txt`](reports/ps2-census.txt) |
 | 2003 GameCube corpus, unmodified reference decoder, **big-endian machine** | **487 / 487** blocks exact on each of two discs, 79.7 MB → 143.4 MB, [`reports/gc-census.txt`](reports/gc-census.txt) |
-| 2002 decoder against 2004, on one CPU | 1 identical word in 180, longest identical run **6 bytes** at any alignment, [`reports/gc-lineage.txt`](reports/gc-lineage.txt) |
+| 2004 *Rebirth* corpus, unmodified reference decoder | **2,851 / 2,851** blocks exact across three nesting levels, 284.9 MB → 1,061.5 MB, [`reports/rebirth-lineage.txt`](reports/rebirth-lineage.txt) |
+| 2002 decoder against 2004 *Symphonia*, on one CPU | 1 identical word in 180, longest identical run **6 bytes** at any alignment, [`reports/gc-lineage.txt`](reports/gc-lineage.txt) |
+| 2004 *Rebirth* decoder against 2004 *Symphonia*, whole executables | **17 bytes**; the same-length C-runtime control from the same file scores **276**, [`reports/rebirth-lineage.txt`](reports/rebirth-lineage.txt) |
 | 2002 decoder against 1997 and 2000, instruction by instruction | 0 identical words, ~50% opcode sequence; control reproduces 212 bytes, [`reports/ps2-lineage.txt`](reports/ps2-lineage.txt) |
 | Self-test, no image needed — the two dialects' run arithmetic | 4–18 and 19–274 **agree across dialects**, [`reports/selftest.txt`](reports/selftest.txt) |
 | Exhaustive scan of the 6 MiB Super Famicom image | **1,089 blocks**, 115 `$81` + 974 `$83`, every one decoding to its declared length |
@@ -238,6 +274,7 @@ Reports: [`reports/ps2-census.txt`](reports/ps2-census.txt),
 [`reports/census.txt`](reports/census.txt),
 [`reports/cross-check.txt`](reports/cross-check.txt),
 [`reports/decoder-identity.txt`](reports/decoder-identity.txt),
+[`reports/rebirth-lineage.txt`](reports/rebirth-lineage.txt),
 [`reports/selftest.txt`](reports/selftest.txt).
 
 ---
@@ -282,6 +319,7 @@ Dependency-free Python 3, one file, no imports beyond `sys`.
 | Venus & Braves | PlayStation 2 | 2003 | no — no decoder, on the *Destiny 2* disc | [ps2-talesofdestiny2-doc](https://github.com/vs-sr-dev/ps2-talesofdestiny2-doc) |
 | **Tales of Symphonia** | **GameCube** | **2003** | **yes**, methods 1 / 3 — **on PowerPC**, header still little-endian | [gc-talesofsymphonia-doc](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc) |
 | **Tales of Symphonia** | **PlayStation 2** | **2004** | **yes** — same source, **edited** | [gc-talesofsymphonia-doc](https://github.com/vs-sr-dev/gc-talesofsymphonia-doc) |
+| **Tales of Rebirth** | **PlayStation 2** | **2004** | **yes**, methods 1 / 3 — a **different source**, on both CPUs | [ps2-talesofrebirth-doc](https://github.com/vs-sr-dev/ps2-talesofrebirth-doc) |
 | Tales of Phantasia | Game Boy Advance | 2003 | no — GBA BIOS `LZ77UnComp` | [snes-talesofphantasia-doc](https://github.com/vs-sr-dev/snes-talesofphantasia-doc) |
 | Tales of Berseria | PC | 2017 | no — zlib inside the TL engine | [pc-talesofberseria-doc](https://github.com/vs-sr-dev/pc-talesofberseria-doc) |
 
@@ -295,6 +333,12 @@ break at 2000/2002. **It widened.** The codec crossed to the PlayStation 2
 unchanged, and the same disc that proved it also supplied the negative control
 that says whose format it was.
 
+Six titles later the question has inverted. It is no longer whether the format
+survives a new machine — it has survived four, both byte orders and nine years —
+but whether it survives the *code* being forked. *Tales of Rebirth* is the first
+build that answers that, and it does: the decoder is demonstrably not the same
+source as any neighbour's, and the format is bit-identical anyway.
+
 What is still untested is the 2005 PSP port of *Eternia* and the 2006
 PlayStation 2 remake of *Destiny*. The remake is the interesting one: by then
 the studio had been renamed, and if the codec is still in it, it outlived the
@@ -307,6 +351,7 @@ team's own identity.
 Documentation: [CC BY 4.0](LICENSE-DOCS). `tales_block.py`: [MIT](LICENSE).
 
 *Tales of Phantasia*, *Tales of Destiny*, *Tales of Eternia*, *Tales of
-Destiny 2* and *Venus & Braves* are trademarks of BANDAI NAMCO Entertainment.
+Destiny 2*, *Tales of Symphonia*, *Tales of Rebirth* and *Venus & Braves* are
+trademarks of BANDAI NAMCO Entertainment.
 This project is unaffiliated with and unendorsed by Bandai Namco, Namco Tales
 Studio, Wolf Team, Nintendo or Sony Interactive Entertainment.
