@@ -331,6 +331,14 @@ from the 1997 code only where the 1997 code is wrong.
 | **Tales of Graces** | **Wii** | **2009** | **this format**, methods 0 / 1 / 3 — the **1997 shape again**, on the machine the 2008 build dropped it on, eighteen months later |
 | **Tales of Xillia** | **PlayStation 3** | **2011** | **no** — the first build inside the 2009–2017 gap, on the first machine here with **two instruction sets**; its compressor is **LZMA** in an envelope of its own, and the `TL` engine and the tag `TO11` are both on it |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
+| **Tales of Crestoria** | **Android** | **2020** | **no** — tri-Ace's ASKA, and its own `SLZ` wrapper: method 7 is chunked Zstandard |
+| **Tales of Luminaria** | **Android** | **2021** | **no** — Unity 2019.4 with IL2CPP, and **no compressor of its own at all** |
+
+The last two rows are new to this table and were previously recorded only in
+section 8. They are here because the table's question is *where the format is
+and is not*, and two mobile titles that are not it belong in it exactly as
+*Venus & Braves* does. Keeping them out was making the corpus look like a
+console corpus with a footnote.
 
 ### The 2000 build is not a reimplementation
 
@@ -1827,6 +1835,63 @@ retail index in **151,862 of 151,862 file entries and 149,782 of 149,782 hash
 entries**.
 [ps3-talesofxillia-doc](https://github.com/vs-sr-dev/ps3-talesofxillia-doc).
 
+### The two mobile builds are the first pair here that does not share an engine
+
+*Tales of Crestoria* (Android, 2020) and *Tales of Luminaria* (Android, 2021)
+are fourteen months apart, published by the same company, on the same platform,
+in the same genre. They were the strongest cross-title comparison this document
+had available at the *package* level, and they had to be run rather than
+assumed.
+
+They share nothing below the Android platform layer.
+
+| | *Crestoria* 2020 | *Luminaria* 2021 |
+|---|---|---|
+| package | `com.bandainamcoent.crestoria_ww` 2.5.0 | `com.bandainamcoent.toluminaria_en` 1.6.0 |
+| bytes / entries | 118,542,014 / 330 | 101,922,396 / **1,096** |
+| engine | **ASKA**, tri-Ace | **Unity 2019.4.16f1**, IL2CPP |
+| developer | not named anywhere | **COLOPL**, named in six places |
+| codename | `Epic` | **`natalie`** |
+| entry activity | `jb.Aska.AskaActivity` → `EpicActivity` | `jp.colopl.app.activity.StartActivity` → `UnityPlayerActivity` |
+| containers | `aska0000.bin`, `disc1/f0000N.bin` | Unity SerializedFile × 465 |
+| compressor | `SLZ` method 7, chunked Zstandard | **none of its own** |
+| audio | `AAC ` chunk container, Ogg Vorbis, 2,729 streams | FMOD FSB5, Vorbis, **5** streams |
+| textures | `AIF`, ETC2 RGBA8 | Unity Texture2D, ASTC + ETC2 |
+| files in common | | **46, all Google Play Services boilerplate** |
+| internal names in common | | **2**: `MainScene` and `Node` |
+
+The measurement behind the last two rows is worth the space, because a count
+of two cannot be read and the names can. 6,994 internal names against 1,333,
+intersected exactly: `MainScene` and `Node`. Ignoring case raises it to twelve
+and the twelve are `battle`, `common`, `data1`, `enemy`, `item`, `loading`,
+`mainscene`, `mission`, `news`, `node`, `profile`, `title` — ordinary English
+words that two games about fighting would each arrive at alone. On the file
+side, 46 SHA-1 hashes occur in both packages and every one is a Google Play
+Services drawable, `res/xml/splits0.xml`, `billing.properties`,
+`stamp-cert-sha256` or an AndroidX version stamp. That the intersection is
+non-empty at all is worth saying, because on *Tales of Xillia* against *Tales
+of Graces* it was exactly one file and that file was the zero-length one.
+
+**Neither carries the codec, and the two negatives are not the same kind of
+negative.** On *Crestoria* the ASKA formats are all present and all readable and
+the block codec simply is not among them. On *Luminaria* there is no studio
+format at all: `ZSTD`, `zstd`, `Zstandard` and the Zstandard frame magic all
+score zero over 299,304,225 bytes, `TLZC`, `CPK `, `FPS4` and `CRILAYLA` score
+zero, and everything in the package is either stored raw or deflated by the
+zip. `aska.py` over that package returns an **empty signature table** — not one
+versioned magic, payload magic, namespace or pipeline string — where a
+four-byte magic is expected 0.0237 times.
+
+The reading this document has carried since 2004 gains a clause. It was: by
+then there was no longer one copy of the *source*, and the format did not
+notice. *Legendia* added that a build can have the algorithm without the file.
+The two gacha add that **on mobile the engine itself is a per-project decision,
+and it is made outside the series**: *Crestoria* was built by a studio that had
+an engine, *Luminaria* by a studio that had a Unity framework, and one publisher
+commissioned two developers and got two technologies fourteen months apart.
+[android-talesofcrestoria-doc](https://github.com/vs-sr-dev/android-talesofcrestoria-doc),
+[android-talesofluminaria-doc](https://github.com/vs-sr-dev/android-talesofluminaria-doc).
+
 ### The boundary tested on a single disc
 
 The *Tales of Destiny 2* disc is the sharpest negative control this
@@ -2234,6 +2299,135 @@ is
 [`struct_probe.py`](https://github.com/vs-sr-dev/nds-talesofthetempest-doc/blob/main/tools/struct_probe.py)
 and the near-miss reader is
 [`nearmiss.py`](https://github.com/vs-sr-dev/nds-talesofthetempest-doc/blob/main/tools/nearmiss.py).
+
+### On AArch64 the ARM rule inverts, and one pass is a complete search
+
+The section above is about ARM32, and it is the reason this one exists. The
+corpus's first 64-bit ARM target is *Tales of Luminaria* (Android, 2021), and
+**AArch64 is not ARM32**: everything the ARM32 paragraph says cannot be encoded,
+can be.
+
+| Constant | ARM32 data-processing immediate | AArch64 |
+|---|---|---|
+| 4070 (`0xFE6`) | **no** | `movz`, and `add`/`sub`/`cmp` |
+| 4071 (`0xFE7`) | **no** | `movz`, and `add`/`sub`/`cmp` |
+| **4078 (`0xFEE`)** | **no** | **`movz`**, and `add`/`sub`/`cmp` |
+| **4079 (`0xFEF`)** | **no** | **`movz`**, and `add`/`sub`/`cmp` |
+| 4080 (`0xFF0`) | yes, `0xFF ror #28` | `movz`, `add`/`sub`/`cmp`, **and the bitmask immediate** |
+| 4095 (`0xFFF`) | **no** | `movz`, `add`/`sub`, **and the bitmask immediate** |
+| 4096 (`0x1000`) | yes, `1 ror #20` | `movz` and the bitmask immediate |
+
+`movz`/`movk`/`movn` carry a **16-bit** immediate with a 16-bit-aligned shift,
+so all five of this document's constants fit in one instruction with no shift.
+`add`/`sub`/`cmp` carry **12 bits**, optionally shifted by twelve, so all five
+fit there too. And the ring mask `& 0x0FFF` is a plain logical immediate here —
+4095 is twelve ones, which the bitmask encoding expresses directly — where on
+ARM32 it had to be a literal-pool word or an `lsl #20` / `lsr #20` pair.
+
+**So on this one machine the immediate pass is a complete search on its own.**
+The literal-pool pass is still run and its denominator still printed, because a
+compiler may materialise a constant either way and `ldr (literal)` remains the
+cheapest route to a 64-bit value; but a single-pass AArch64 scan's silence is a
+real negative in a way a single-pass ARM32 scan's is not.
+
+Three practical notes:
+
+* **`ret` is exactly `0xD65F03C0`** and nothing else is, which makes walking
+  back to a routine's entry — step 3 of the checklist above — cheap on this
+  machine in a way it is not on ARM32.
+* **A `movz` hit and an `add`/`sub` hit mean different things** and should be
+  reported apart. A constant being *materialised* into a register is what a ring
+  cursor looks like; a constant being *added to something* is what a loop bound
+  looks like. On *Luminaria*'s `libunity.so` the distribution is 144 `add`/`sub`
+  of 4080 and two `movz` of 4080 and nothing else, which is a graphics library
+  with 4096-byte buffers rather than a decoder.
+* **4080 stays the weakest of the five**, for the reasons the DS section gives —
+  `round(4096 · cos 5°)`, and 4096 − 16 — and on AArch64 it is additionally the
+  only one of the five that a logical immediate can hold.
+
+A tool that does both passes with a `--selftest` from the first day is
+[`ring_sites.py --arm64`](https://github.com/vs-sr-dev/android-talesofluminaria-doc/blob/main/tools/ring_sites.py).
+It caught its own hand-assembled test vectors being wrong twice before it
+produced any output, which is what the selftest is for.
+
+### Before scanning a native image, measure whether it is code
+
+The four traps this section already records — a `BLZ`-compressed DS overlay, a
+zero-filled Xbox 360 image, an encrypted PlayStation 3 executable, and *Tales of
+Crestoria*'s `libEpic.so` with 99.7% of `.text` zeroed — all have the same shape:
+the scan returns zero and the zero means nothing. *Tales of Luminaria* is a
+fifth form, and it is the one a zero-fill check misses.
+
+`libil2cpp.so` there is 88,874,048 bytes on arm64 and 68,214,024 on
+armeabi-v7a, together 42.71% of the package. It has **four section headers and
+no `.text` at all**, so the section table cannot be the unit of measurement and
+`PT_LOAD` with `PF_X` has to be. Its executable segment is 32.71% zero — not
+99.7%, so a zero-fill threshold passes it — and the bytes that are not zero are
+not code either.
+
+**What separates them is structure, and entropy cannot see it.** Compiled ARM
+sits near 6 bits per byte and so does compressed texture data. Each instruction
+set, though, has a handful of encodings that are single fixed words and appear
+in essentially every compiled function, and counting those gives a *rate*:
+
+| Image | counted as | executable bytes | `ret` | by chance |
+|---|---|---:|---:|---:|
+| `libunity.so`, same package, same ABI | AArch64 | 17,521,416 | **58,853** | 0.0010 |
+| **`libil2cpp.so`** | AArch64 | **73,309,724** | **0** | 0.0043 |
+| `libunity.so`, same package, same ABI | THUMB | 13,867,212 | **8,557** | 105.80 |
+| **`libil2cpp.so`** | THUMB | **60,130,336** | **83** | **458.76** |
+
+The last row is the one to read twice: 83 against a chance rate of 459 is
+**below** what uniform random bytes would give.
+
+Three rules follow, and the third is the one that generalises:
+
+1. **Take the control from inside the package.** An Android APK ships a dozen
+   third-party libraries built by the same toolchain for the same ABI. They say
+   what this build's code is supposed to look like, and they cost nothing.
+2. **Quote the chance rate beside the count.** `ret` on a 32-bit encoding fixes
+   all thirty-two bits and turns up once per four gigawords; the THUMB frame
+   push fixes only the high byte and turns up once every 256 halfwords in
+   anything at all. A raw count of THUMB pushes over sixty megabytes measures
+   the sixty megabytes.
+3. **Say "the denominator is zero", not "no hits".** They are different claims
+   and only one of them is true here. A constant scan over `libil2cpp.so`
+   returns nothing, and reporting that as a negative would be reporting a
+   measurement that was not made.
+
+A tool that does this, with a `--selftest` that hand-assembles every word it
+looks for and every near miss, is
+[`codedensity.py`](https://github.com/vs-sr-dev/android-talesofluminaria-doc/blob/main/tools/codedensity.py).
+It caught a wrong AArch64 `stp x29, x30` mask on its first run.
+
+### A blind sweep's cost is set by the data, and the candidate count is the denominator
+
+*Tales of Luminaria* makes a point about `plausible()` that the disc targets
+never had to. A flat per-member sweep over its 1,096 extracted files in both
+dialects was started and stopped after seventy minutes without reaching the four
+largest native libraries.
+
+The filter is cheap — about 0.68 seconds per mebibyte per dialect, so 299 MB in
+both dialects is roughly seven minutes. What is expensive is `unpack()`, which
+runs on every offset the filter *accepts*, and decodes up to sixteen megabytes
+per candidate. High-entropy data accepts a great many:
+
+| Dialect | candidates | rate |
+|---|---:|---|
+| 1995 (`$81`/`$83`) | **217** | one per 1,379,282 bytes |
+| 1997 (methods 0/1/3) | **53,689** | one per 5,575 bytes |
+
+The 1997 dialect accepts 247 times as many because its size cap is `0xFFFFFF`
+against the 1995 dialect's `0xFFFF` — the Super Famicom decoder loads each size
+with a 16-bit `LDA` and never reads the upper half, which section 1 records and
+which turns out to matter for a reason section 1 could not have anticipated.
+
+Two things follow. **Count the candidates separately and print them**, because
+it finishes when the decode does not and because "N offsets passed the filter
+and none of them decoded" is a stronger statement than "no hits". And **the
+worst payload is the one with no internal boundaries**, which on a disc is the
+executable and in a package is the largest `.so` — the same observation the
+PlayStation 3 build made, in a form that costs more.
 
 ### Sweep per member, not per image
 
@@ -3717,14 +3911,36 @@ instead. See
   carries the two-pass variant, and the moral is the one the JVM already taught
   in a different key — *the shortcut is about a machine, not about a format*.
   [nds-talesofthetempest-doc](https://github.com/vs-sr-dev/nds-talesofthetempest-doc).
-* **Was the format ever ported to a virtual machine?** Not in the two
-  Java-family builds examined. *Tales of Tactics* (i-appli, 2004) and *Tales of
-  Crestoria* (Android, 2020) both use only the platform's own decompression. A
-  decoder for this format in JVM bytecode would be perhaps sixty lines and a few
-  hundred bytes, which the 2004 build — 10,298 bytes under its size cap — could
-  plausibly have afforded; there is no evidence anyone considered it. What would
-  settle it is a *Tales* keitai title that ships its own container rather than
-  one-entry JARs, and none of the four examined does.
+* **~~Was the format ever ported to a virtual machine?~~** *Answered, no — and
+  the question needed restating before it could be.* It was posed of the two
+  Java-family builds, *Tales of Tactics* (i-appli, 2004) and *Tales of
+  Crestoria* (Android, 2020), both of which use only the platform's own
+  decompression; and it named the thing that would settle it as *a mobile title
+  that ships its own container rather than one-entry JARs*.
+
+  **That condition has now been met twice, and it was already met once when the
+  question was written.** *Crestoria* ships `aska0000.bin` and
+  `disc1/f0000N.bin` — tri-Ace's virtual disc, the studio's own container, not a
+  JAR — with its own `SLZ` wrapper on top, and the format is not in it. *Tales
+  of Luminaria* (Android, 2021) ships 465 Unity SerializedFiles, 9,761 objects,
+  and no compressor of its own at all, and the format is not in that either.
+
+  So the answer is no, and the framing is what was wrong. **Neither mobile build
+  reads its containers in a virtual machine.** ASKA is C++ compiled to ARM;
+  Unity's IL2CPP compiles the game's C# to C++ and then to ARM, which is why
+  `libil2cpp.so` is 88 MB and why `Assembly-CSharp.dll` does not exist as a file
+  on that package. The 2004 i-appli build is the only one of the four that ever
+  ran its decompression as bytecode, and it used the platform's `deflate`. After
+  2004 "virtual machine" stopped being the category the question was about: on
+  modern mobile the code that opens a container is native, and the interesting
+  question is whose engine it belongs to. Both mobile builds answer *not the
+  series'* — and they answer it differently from each other, which is the new
+  result. See section 6.
+
+  What is left of the original question is narrower and probably unanswerable:
+  a decoder for this format in JVM bytecode would be perhaps sixty lines and a
+  few hundred bytes, which the 2004 build — 10,298 bytes under its size cap —
+  could plausibly have afforded, and there is no evidence anyone considered it.
 * **Why the nibble swap?** No functional reason has been found. It costs
   nothing either way and it is the sort of thing that changes when code is
   rewritten from a description rather than ported line by line — which, if
