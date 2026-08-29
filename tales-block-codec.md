@@ -1785,9 +1785,9 @@ saying plainly what that does and does not settle: **the engine and the codec
 are separable.** This build has the engine, carries the line's project number
 as its root namespace, and has no codec at all.
 
-**Nothing crosses at the asset level, for the fifth time.** Zero
-byte-identical payloads between 92,660 distinct payloads here and the 7,905
-that repository extracted. The internal-name intersection is 6,527 of 309,774
+**Nothing crosses at the asset level, for the fifth time.** Of 92,660 distinct
+payloads here and 7,906 in what that repository extracted, **exactly one hash
+is common and it is the empty file** — a zero-length member on each disc. The internal-name intersection is 6,527 of 309,774
 against 248,596 and it was **read**: font glyph-order strings, **romaji
 skeleton names** — `BONE_ATAMA`, `BONE_KUBI`, `BONE_KOSHI`, `BONE_AGO`,
 `BONE_SEBONE00` — and generic effect vocabulary. Not one asset of the
