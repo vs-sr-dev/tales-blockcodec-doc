@@ -327,6 +327,7 @@ from the 1997 code only where the 1997 code is wrong.
 | **Tales of Innocence** | **Nintendo DS** | **2007** | **no** — the *control*: another team, same platform, and it compresses in the **platform's own** `LZ77` |
 | **Tales of Symphonia: Ratatosk no Kishi** | **Wii** | **2008** | **no** — the direct sequel to the 2003 build, **same instruction set**, from **inside the line** |
 | **Tales of Vesperia** | **Xbox 360** | **2008** | **this format**, methods 0 / 1 / 3 — the **1997 shape again**, six weeks after the build above, on a **third compiler**, beside XCompress |
+| **Tales of Hearts** | **Nintendo DS** | **2008** | **no** — two cartridges, one build, five months after the build above; the container `FPS4` crossed and the codec did not |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
 
 ### The 2000 build is not a reimplementation
@@ -1262,6 +1263,139 @@ Whether a build names itself is a property of its build settings, and this line
 in mid-2008 did.
 [xbox360-talesofvesperia-doc](https://github.com/vs-sr-dev/xbox360-talesofvesperia-doc).
 
+### The fifteenth build is two cartridges, and the container crossed instead
+
+*Tales of Hearts* (Nintendo DS, 18 December 2008) shipped as **two** cartridges
+on one day — an Anime Movie Edition and a CG Movie Edition — and it is the
+third Nintendo DS title in this corpus and the first carrying the project
+number after *Vesperia*'s. It does not carry the codec, and what it does carry
+takes a clause out of the previous section rather than adding one.
+
+**Step zero finally bit.** Section 7 has made *decompress the modules first*
+the opening act on this platform since the eleventh build, with the standing
+note that the step had never yet prevented a false negative and that this was
+known only because it was run every time. On these cartridges **thirty-two of
+the thirty-three modules are `BLZ`-packed** — the ARM9 and all thirty-one
+overlays — so 1,620,780 bytes on the cartridge become 2,852,064 bytes of
+plaintext code, and a scan of the shipped image would have returned the same
+zero over the wrong bytes.
+
+Worse, and this is the part worth carrying forward: **the decompressor was
+wrong in two ways and had never been executed.** Written for *Tempest*, which
+has no overlays, and carried to *Innocence*, whose three are stored plain, it
+assembled a match token's two bytes in the wrong order and did not clamp the
+copy to the end of the encoded region. Both defects fail in the direction of
+*this module is not packed*. The repair has a positive control that was on the
+cartridge all along and that section 7 now recommends looking for: **the
+overlay table states each overlay's plaintext length**, written by the Nintendo
+linker, and **31 of 31 overlays decompress to exactly their declared length**.
+
+With that done the scan is a complete search in both of the encodings ARM has,
+and the answer is a clean negative quoted against its denominators:
+
+| | ARM9 | ARM7 | 31 overlays | **total** |
+|---|---:|---:|---:|---:|
+| ARM data-processing immediates | 45,111 | 11,911 | 144,405 | **201,427** |
+| THUMB instructions carrying a literal | 26,436 | 5,253 | 74,630 | **106,319** |
+| 4-byte-aligned words | 186,366 | 39,882 | 486,768 | **713,016** |
+| distinct PC-relative load targets | 7,175 | 1,800 | 18,158 | **27,133** |
+| **4078 / 4079 / 4070 / 4071, either form** | **0** | **0** | **0** | **0** |
+| 4080 | 3 immediates + 4 words | 0 | 0 | 7 |
+
+The overlays hold 71% of the ARM immediates and 70% of the THUMB literals, so a
+scan of `arm9.bin` alone covers under a third of the code — the same proportion
+*Innocence* recorded, and the reason the scanner now has a directory mode with a
+totals row.
+
+All seven `4080` sites were disassembled, as section 7 requires. One is a
+structure member's offset before a call, the shape *Ratatosk* found eight times.
+One is `add r0,r5,#4080 ; add r0,r0,#61440` — `4080 + 61440 = 65520 = −16 mod
+2**16` — a range check split across two immediates because ARM cannot encode
+65,520 in one, which is a way for this constant to appear that no other machine
+in the corpus offers. One is a four-field unpack of a single word with masks
+`0xFF00000` / `0xFF000` / `0xFF0` / `0xF`, which is the nearest thing on either
+cartridge to looking like the codec and is four fields where the codec has two.
+And **the remaining four are entries of a 4,096-scaled cosine table**, none of
+them the target of any PC-relative load, with **96 of 96 surrounding aligned
+words** equal to `round(4096 · cos θ)` to within one — *Tales of the Tempest*'s
+finding on a second cartridge, stored as a plain array there rather than as the
+446 compiled stubs Tempest carried.
+
+The structural probe agrees, with one row that has to be read rather than
+counted. It reports **eight** `orr rX, rY, #0xFF00` — the control-register
+refill, the fingerprint this document calls load-bearing — and all eight are
+`orrgt`, each following a `cmp` against 127 or 255 and each followed by
+`lsl #16 ; asr #16`. **They are sign extensions**, and section 7 now carries the
+discriminators. Zero fingerprint clusters over 713,016 words. And the ARM/THUMB
+trap fired for the third time: **0 genuine ARM `add #19`, 67 THUMB, and all 67
+inside ARM words** — `mov r3,r3,lsl r7` and `movs r3,r3,lsl r5`, the video
+decoder's bit-consume step, exactly as on *Innocence*, which reported 22 where
+Tempest reported 24.
+
+And the blind decode, through a descent five levels deep whose top level is the
+*executable*: **0 blocks in 47,195 payloads and 376,083,362 bytes** on each
+cartridge, both dialects, at every offset, with the 1995 cartridge's **1,089**
+returned by the same unmodified decoder in the same invocation.
+
+**Two cartridges are an internal control, and this is the first time the corpus
+has had one.** Running the identical container descent over both images and
+comparing payload by payload: **28,662 of 28,679 distinct payloads are
+byte-identical**. Seventeen differ, and every one is the film or a structure
+that moves because of it — the nine movies, a fifty-byte Shift-JIS build note
+saying which edition's assets are in the tree, the ROM header, the banner, the
+file allocation table, two alignment regions, the tail, and `arm9.bin`, whose
+plaintext differs only in regenerated secure-area filler, **eight `BLX` offsets
+into it**, and one byte of its own packed length. Those eight addresses are
+independently the eight call sites the BIOS-caller census reports. The two
+cartridges run the same code, so every measurement on one is a measurement on
+both.
+
+**What is there instead is the platform's compression without the platform's
+code, and the studio's container.** 5,280 BIOS-format streams *inside the
+containers*, 61,737,814 bytes becoming 123,245,746 — against **zero callers** of
+all six linked decompression wrappers over **43,946** resolved branch targets,
+across the module boundary, with `CpuSet` at one caller and `Stop/Sleep` at
+seven so the instrument is shown to find callers where there are callers. The
+software routine that must therefore exist was not found, which is the second
+time that probe has failed on a build that demonstrably contains its target.
+
+The file-level figure is 11 of 5,145, and quoting it would have been the error:
+this build compresses inside its containers rather than at the file level, so a
+census that stops at the Nitro file system reports a build that barely
+compresses instead of one whose asset pipeline is compressed throughout.
+
+**And the container is `FPS4`.** The same container as the Xbox 360 *Tales of
+Vesperia*, mastered five months earlier: same 0x1C header, same field mask
+selecting which of four per-entry fields exist, same 32-byte names — and
+**little-endian here where it is big-endian there**. The byte order is the
+machine's and the structure is the line's, which is the nine-byte block
+header's own behaviour in reverse. 2,492 archives read against 2,493 magic hits
+on the raw image, so the descent is complete and not merely deep. A second
+container, `V154`, holds 1,508 objects behind the project's own `.ds3`
+extension.
+
+So the shape this document adopted after the fourteenth build needs one thing
+added rather than changed. It was: the codec persists and the packer varies.
+These cartridges add a third thing that persists — **the container's
+structure** — and it persisted across a change of machine, of byte order and of
+processor family in five months, while the compressor it was built to hold did
+not travel with it.
+
+**What it cannot settle is who built it, and that has to be said in the same
+breath as the rest.** The cartridge names its developer **nowhere**, in ASCII,
+Shift-JIS or UTF-16LE — `テイルズスタジオ` zero, `株式会社` zero,
+`アルファ・システム` zero, `Dimps` zero — and it was compiled with RTTI off, so
+there are five C++ names in 2,852,064 bytes of plaintext and all five are the
+standard library's. The publisher is named once, in the banner, in UTF-16.
+
+What it does carry is a project number. **`TO9`** is in six file names, in a
+file extension of its own (`.to9moh`, 101 members) and in a debug overlay's
+version banner four bytes from the build date `Nov 19 2008` — and `TO7` is
+*Tales of the Abyss*'s tag and `TO8` is *Tales of Vesperia*'s, both of them
+line builds that carry the codec. That is the whole of the lineage evidence: a
+number in the right place in a known sequence, and no hand attached to it.
+[nds-talesofhearts-doc](https://github.com/vs-sr-dev/nds-talesofhearts-doc).
+
 ### The boundary tested on a single disc
 
 The *Tales of Destiny 2* disc is the sharpest negative control this
@@ -1542,7 +1676,25 @@ Two further ARM-specific facts belong in the same paragraph, because they
 change what the *structural* probe of step 3 can see:
 
 * `orr rX, rX, #0xFF00` **is** encodable (`0xFF ror #24`), so the control
-  register's refill would appear as a plain immediate and a probe will find it;
+  register's refill would appear as a plain immediate and a probe will find it
+  -- **and so will a sign extension, which is the same instruction.** This is
+  the fifteenth build's correction and it is not cosmetic: a compiler widening
+  a signed byte or a signed 9-bit field to a halfword emits
+
+  ```
+  cmp    rX, #127          (or #255)
+  orrgt  rX, rX, #0xFF00
+  movgt  rX, rX, lsl #16
+  movgt  rX, rX, asr #16
+  ```
+
+  and *Tales of Hearts* carries eight of them in one routine that unpacks
+  packed coordinate pairs. The discriminators are **the condition code** --
+  this format's refill is unconditional -- and **the neighbouring `cmp`**,
+  which the format does not have because its refill follows a byte load. A
+  probe that counts the bare instruction reports eight refills on a build with
+  none, which is the mirror of the Xbox 360 failure: there the probe missed two
+  real ones, here it would invent eight;
 * `and rX, rY, #0x0FFF` is **not**, so the ring mask appears as a literal-pool
   4095, or as `lsl #20` followed by `lsr #20`, and all three forms have to be
   counted;
@@ -1557,10 +1709,29 @@ change what the *structural* probe of step 3 can see:
    negative. The overlay table says per overlay whether it is compressed; the
    ARM9 says so in its module parameters (`compressed_static_end`), and the
    `BLZ` footer says so independently. Check both, scan all of them, and say
-   which were compressed. *Two DS cartridges in, neither uses it -- Tempest has
-   no overlays and Innocence has three uncompressed ones -- so this step has
-   still never prevented a false negative, and the only reason that is known is
-   that it was run every time.*
+   which were compressed.
+
+   **The fifteenth build is where this stopped being a precaution.** *Tales of
+   Hearts* (Nintendo DS, 2008) packs **thirty-two of its thirty-three modules**
+   -- the ARM9 and all thirty-one overlays -- turning 1,620,780 bytes on the
+   cartridge into 2,852,064 bytes of plaintext code. Scanned as shipped it
+   returns the same zero it returns in plaintext, over 43% fewer bytes and the
+   wrong ones.
+
+   **And check the decompressor before believing it, because ours was wrong.**
+   It had never been executed: *Tempest* has no overlays, *Innocence*'s three
+   are stored plain, and the routine went two pipelines without running once.
+   Two defects, both of which fail in the direction of *this module is not
+   packed*: the two bytes of a match token were assembled in the wrong order --
+   walking a backwards stream, the byte at the *higher* address is the one a
+   forward reader sees first -- and the copy was not clamped to the end of the
+   encoded region.
+
+   **The positive control for it is free and it is on the cartridge.** The
+   overlay table states each overlay's *plaintext* length in its `ram_size`
+   field, written by the Nintendo linker and by nothing of ours, so a correct
+   decompressor has to reproduce it. On *Tales of Hearts*, **31 of 31**. Any DS
+   target with overlays supplies the same check; run it.
 
    **Scan the overlays, and resolve branches across the module boundary.**
    Tempest had none, so *resolve every branch in the image* was a complete
@@ -1802,6 +1973,23 @@ probe is calibrated against one toolchain's idiom, and a new toolchain is a new
 calibration.** Run it against a known positive built with the *same* compiler
 before believing a zero, and if there is no such positive, say so.
 
+**On ARM there is no such positive anywhere in this corpus**, and the fifteenth
+build is where that had to be written down rather than worked around. Three DS
+cartridges have now been probed and none of them contains the format, so every
+ARM zero this document quotes rests on a probe that has never been shown to
+find a real one. Two things are worth doing instead of nothing, and *Tales of
+Hearts* does both:
+
+* **do not require `rd == rn`** on the refill, which is the Xbox 360 lesson
+  applied before it is needed rather than after;
+* **self-test the detectors**: hand-assemble every fingerprint in every form
+  the probe looks for and check that each one fires. Seven of seven do on the
+  ARM probe.
+
+That demonstrates the detectors work. It does **not** demonstrate that an ARM
+compiler would spell a real decoder the way they expect, and the report has to
+print that sentence above the numbers rather than after them.
+
 ### The byte test's noise floor is a property of the platform
 
 This document quotes a noise floor of six to eight bytes for `prefix_scan.py`,
@@ -1861,6 +2049,35 @@ Two masks occur on one disc:
 A reader that assumes the first reads the second's name as its size, reports
 members of 1,398,362,964 bytes inside a 10,292-byte file, raises no error, and
 would have had that archive counted as 40,760,677% full. Read the mask.
+
+**And a mask with no size field in it does not mean the sizes are missing.**
+The fifteenth build carries the same container on a different machine and adds
+a third mask:
+
+```
+0x0003   offset, padded size                     8-byte entries
+0x0001   offset only                             4-byte entries
+```
+
+On `0x0001` each member runs from its own offset to the next entry's, and the
+last entry is a terminator whose offset is the archive's length -- the same
+convention `0x000F` uses for its final entry. A reader that requires an
+explicit size finds **no members at all** and reports the archive as
+unreadable: on *Tales of Hearts* that was **1,904 nested archives** before the
+reader learned the implicit form. The Xbox 360 trap reads a missing field as a
+present one and fails towards absurd sizes, which is loud; this one reads a
+present field as missing and fails towards *fewer payloads*, which on a census
+is a clean-looking zero. The second is the more dangerous of the two.
+
+**The container may also be split across two files, and then the offsets are
+not into the file you are holding.** Seventeen archives on those cartridges are
+an index whose entries point into a separate payload file beside it -- `m.b`
+carries 1,521 entries and no payload, `m.dat` is 65 MB and has no directory --
+and the same split recurs *inside*, where a member named `X.B` indexes its
+sibling `X.MAPBIN`. Do not infer the pairing from the naming: try each
+candidate and keep the one for which **every** entry lands inside it, so the
+archive verifies the pairing rather than the reader assuming it. 422 pairs at
+the file level and 405 inside, on one cartridge.
 
 The same disc is also the corpus's deepest nest — XDVDFS file, `FPS4`, nested
 `FPS4`, and the nine-byte block *whose plaintext is another `FPS4`* — and the
@@ -2139,6 +2356,48 @@ payload it did that to, because a block longer than the overlap could fall
 across a seam. The largest block anywhere in this corpus is 3,864,151 packed
 bytes, which fits.
 
+### What a build says about itself is not what a build linked
+
+On a Nintendo DS the `[SDK+VENDOR:COMPONENT]` strings are the cheapest thing to
+read and this document has treated them as the licence list. They are not.
+
+*Tales of Hearts* carries **two** tags — `[SDK+NINTENDO:BACKUP]` and
+`[SDK+Actimagine:Mobiclip SDK V1.0.2]` — and **eight CRI components** that name
+and version and date themselves in the same ARM9 (`ADXT/NITRO Ver.10.62`,
+`AHX/NITRO Ver.1.85`, `NITROCI`, `MFCI`, `ADXNITRO`, `ADXCS`, `NITRORNA`,
+`CRI CRW:STD`), a CRI file-system layer whose functions are `nitroCiOpen` and
+`nitroCiReqRd`, CRI's entire error-message table, and `(c)CRI` **8,912 times**
+across the cartridge. Not one `[SDK+CRI:…]`. *Tales of Innocence* licensed nine
+CRI components and tagged them; this build licensed eight and tagged none.
+
+So the tag list says what a build *tagged*. Quote it as that, and then read the
+version strings, which are in the modules and are therefore behind `BLZ` --
+which is why this is a section 7 item and not a footnote: on that cartridge the
+shipped image shows **two fragments of one string** where the plaintext shows
+**nine stamps**.
+
+### `__DATE__` has two shapes and a pattern that wants one finds neither
+
+The C preprocessor writes `Mmm dd yyyy` and pads the day with a *space* only
+when it is a single digit:
+
+```
+Jan  1 2008        two spaces
+Nov 19 2008        one space
+```
+
+This corpus's date scanner required two, so it matched the first shape and
+missed the second. On *Tales of Hearts* that is the difference between zero
+compiler dates and one, and the one — `Nov 19 2008`, four bytes from the
+project tag in a debug overlay's version banner — is the only date either
+cartridge carries about itself.
+
+The general form is the one section 7 keeps rediscovering: **a pattern that
+fails silently returns the answer a clean negative returns.** The check is to
+run the scanner over something known to contain the thing, and on a DS target
+the middleware supplies it for free -- CRI stamps `Build: Aug 26 2008 16:33:56`
+into the ARM9 and any date scanner that cannot see that is broken.
+
 ### What does *not* work: comparing routines across instruction sets
 
 The opcode-sequence measure in this repository's own tooling works because
@@ -2212,9 +2471,18 @@ instead. See
   **8,255 of 8,255 blocks** decoding to their declared length under the same
   unmodified decoder — 337,852,435 packed into 775,930,739. It is also the
   first build compiled by a third toolchain, Microsoft Visual C++, and the
-  nibble order did not move there either. Two dialects, fourteen builds, eight
-  platforms, both byte orders, three compilers, thirteen years, and the split is
-  still 1995/1997.
+  nibble order did not move there either. The fifteenth, *Tales of Hearts*
+  (Nintendo DS, 18 December 2008), adds none and is the **third** cartridge on
+  that machine to add none: zero 4078 / 4079 / 4070 / 4071 in either ARM
+  encoding across **201,427** ARM data-processing immediates, **106,319** THUMB
+  literals, **713,016** aligned words and **27,133** distinct PC-relative load
+  targets over thirty-three modules **thirty-two of which had to be
+  decompressed first**, and **0 blocks in 47,195 payloads and 376,083,362
+  bytes** under the same unmodified decoder against the same 1,089-block
+  control — on each of the **two cartridges** that shipped that day, which are
+  one build and 28,662 byte-identical payloads of 28,679. Two dialects, fifteen
+  builds, eight platforms, both byte orders, three compilers, thirteen years,
+  and the split is still 1995/1997.
   What is left to test is the 2005 PSP port of *Eternia*, the 2006 PlayStation 2
   remake of *Destiny*, *Radiant Mythology* (PSP, 2006) — and, now that the far
   edge of the 2005-to-2008 interval is closed from inside, the 2009 PlayStation
@@ -2270,7 +2538,13 @@ instead. See
   `5b 80 80 8d` signature is gone, and its assets sit in an `FPS4` container
   instead — six weeks after the Wii build that still had both. So the packer
   varies and the format does not, which is the same shape as the decoders and
-  not the exception this document had recorded. Three habits are new on that
+  not the exception this document had recorded. The fifteenth build adds the
+  other half of that: five months after *Vesperia*, on a Nintendo DS, the
+  **container** `FPS4` is there with the same header and the same field-mask
+  semantics and the machine's byte order, and the codec is not. So of the three
+  things this document tracks — the codec, the packer's envelope, and the
+  container — each has now been observed crossing a generation without the
+  others. Three habits are new on that
   disc and all three are the packer's: the ceiling moved again, to
   **9,070,491 packed producing 21,050,368** against *Legendia*'s 3,864,151;
   the stored path is down to **one method-0 block in 8,255**; and **one block
@@ -2519,6 +2793,61 @@ instead. See
   XCompress path too, so Microsoft's decompressor was grafted into a routine
   that already existed rather than the other way round.
   [xbox360-talesofvesperia-doc](https://github.com/vs-sr-dev/xbox360-talesofvesperia-doc).
+
+  **The fifteenth build is the Nintendo DS title from the far end of that
+  chain, and it narrows the statement without closing it.** *Tales of Hearts*
+  shipped on 18 December 2008, five months after *Vesperia*'s executable was
+  stamped, as **two cartridges on one day** — an Anime Movie Edition and a CG
+  Movie Edition — and it carries the project tag **`TO9`**, which is the number
+  after `TO7` (*Tales of the Abyss*, 2005) and `TO8` (*Tales of Vesperia*,
+  2008). Both of those are line builds and both carry the codec.
+
+  It does not. Zero of the four cursor constants in either ARM encoding over
+  201,427 immediates, 106,319 THUMB literals, 713,016 aligned words and 27,133
+  resolved load targets across thirty-three modules; all seven `4080` sites
+  disassembled and innocent, four of them inside a 4,096-scaled cosine table
+  whose 96 surrounding words match `round(4096 · cos θ)` to within one; zero
+  fingerprint clusters; **0 blocks in 47,195 payloads and 376,083,362 bytes**,
+  on each cartridge, against 1,089 in the same run.
+
+  **And the two cartridges are an internal control the corpus has never had.**
+  28,662 of 28,679 distinct payloads byte-identical, seventeen differences and
+  every one of them the film or a structure that moves because of it. One build,
+  two asset sets, and therefore one measurement stated twice rather than two
+  measurements.
+
+  What it changes about the boundary is not the platform and not the team. It is
+  that **something else from the line crossed the same gap the codec did not**:
+  the container. `FPS4` is on the *Vesperia* disc, big-endian, with a 0x1C
+  header and a field mask selecting which of four per-entry fields exist; it is
+  on these cartridges, little-endian, with the same header and the same mask
+  semantics, five months later on a different processor family. The byte order
+  is the machine's and the structure is the line's — the nine-byte block
+  header's own behaviour, in reverse.
+
+  So the shape at fifteen builds is: **the codec persists, the packer varies,
+  and the container persists too.** Two of the three crossed from *Vesperia* to
+  this cartridge and the codec is the one that did not, which is the opposite of
+  what happened between the 2003 GameCube disc and the 2008 Wii disc, where the
+  envelope and its compressor crossed and the codec did not. Both times exactly
+  one of {codec, container} made the journey, and it was a different one each
+  time.
+
+  **What it cannot do is name the hands, and that has to be said in the same
+  breath as the tag.** These cartridges name their developer **nowhere** — not
+  in ASCII, not in Shift-JIS, not in UTF-16LE — and were compiled with RTTI off,
+  so there are five C++ names in 2,852,064 bytes of plaintext and all five are
+  the standard library's. The publisher is named once, in the banner. `TO9` is
+  a number in the right place in a known sequence and nothing on the cartridge
+  attaches a studio to it.
+
+  So the sentence the twelfth build wrote — *narrowing this further needs a
+  Nintendo DS title from that line, and there is not one* — is still not
+  answered by a cartridge that says who made it. It is answered by a cartridge
+  that carries the line's project number, and the corpus should record the
+  difference rather than spend it. What would close it is a build from this line
+  with RTTI left on, a text credits file, or any other title carrying `TO9`.
+  [nds-talesofhearts-doc](https://github.com/vs-sr-dev/nds-talesofhearts-doc).
 
   One more thing the control supplies, and it is about instruments rather than
   about the format. Tempest named its developer nowhere — no company string, no

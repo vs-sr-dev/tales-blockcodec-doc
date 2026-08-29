@@ -28,8 +28,13 @@ disc was mastered, the same studio line shipped *Tales of Vesperia* on the Xbox
 360 **with the codec**, in the 1997 shape, decoding **8,255 blocks of 8,255** —
 beside 6,128 streams of Microsoft's own XCompress, dispatched from the same
 entry point by one comparison on four bytes — and **without** the envelope or
-the compressor signature its Wii sibling kept. **The codebase is the boundary,
-there is no date, and the thing that varies is the packer.**
+the compressor signature its Wii sibling kept. Five months after that, *Tales
+of Hearts* shipped on the Nintendo DS as **two cartridges on one day**, one
+build with two sets of films, carrying the project number **after** *Vesperia*'s
+— **without the codec**, and with *Vesperia*'s own container `FPS4`, header for
+header and field mask for field mask, byte order turned round to suit the
+machine. **The codebase is the boundary, there is no date, the thing that
+varies is the packer — and the container travels on its own.**
 
 → **[tales-block-codec.md](tales-block-codec.md)** — the specification
 → **[tales_block.py](tales_block.py)** — the reference decoder, both dialects
@@ -565,6 +570,86 @@ format: no synthetic preload, no `| 0xFF00` refill, no nine-byte header, no run
 escape. The scan finds *an* LZSS; the fingerprint cluster identifies *which*.
 [xbox360-talesofvesperia-doc](https://github.com/vs-sr-dev/xbox360-talesofvesperia-doc).
 
+## The result that came with its own control
+
+*Tales of Hearts*, Nintendo DS, 18 December 2008 — the fifteenth build, the
+third cartridge on this machine, and the first to ship as **two cartridges on
+one day**: an Anime Movie Edition and a CG Movie Edition.
+
+That is a control this corpus has never had, and it is free. Running the
+identical container descent over both images and comparing payload by payload,
+**28,662 of 28,679 distinct payloads are byte-identical**. Seventeen differ and
+every one of them is the film or a structure that moves because of it — the
+nine movies, a fifty-byte build note in Shift-JIS saying which edition's assets
+are in the tree, the ROM header, the banner, the file allocation table, two
+alignment regions, the tail, and `arm9.bin`, whose plaintext differs only in
+regenerated secure-area filler, **eight `BLX` offsets into it**, and one byte of
+its own packed length. One build. Every measurement stated twice by identity.
+
+**The codec is not there, and step zero is why that is worth saying.** This
+document has put *decompress the modules first* at the head of the DS checklist
+since 2006 with a standing note that it had never yet prevented a false
+negative. **Thirty-two of these thirty-three modules are `BLZ`-packed** — the
+ARM9 and all thirty-one overlays — 1,620,780 bytes becoming 2,852,064 bytes of
+plaintext code. And the decompressor, never executed in two previous DS
+pipelines because neither cartridge had a packed module, **was wrong twice**:
+a match token's two bytes assembled in the wrong order, and a copy not clamped
+to the end of the encoded region. Both fail in the direction of *this module is
+not packed*. The repair has a control that was on the cartridge all along —
+the overlay table states each overlay's plaintext length — and **31 of 31**
+agree.
+
+Over the plaintext:
+
+| | ARM9 | ARM7 | 31 overlays | **total** |
+|---|---:|---:|---:|---:|
+| ARM data-processing immediates | 45,111 | 11,911 | 144,405 | **201,427** |
+| THUMB instructions carrying a literal | 26,436 | 5,253 | 74,630 | **106,319** |
+| 4-byte-aligned words | 186,366 | 39,882 | 486,768 | **713,016** |
+| distinct PC-relative load targets | 7,175 | 1,800 | 18,158 | **27,133** |
+| **4078 / 4079 / 4070 / 4071** | **0** | **0** | **0** | **0** |
+| 4080, all seven disassembled | 3 imm + 4 words | 0 | 0 | 7 |
+
+Four of the seven are entries of a 4,096-scaled cosine table — **96 of 96
+surrounding aligned words** are `round(4096 · cos θ)` to within one, which is
+*Tales of the Tempest*'s finding on a second cartridge in a different shape.
+Zero fingerprint clusters. Zero genuine ARM `add #19` against 67 THUMB decodes
+of ARM words, the third cartridge to show that trap. And **0 blocks in 47,195
+payloads and 376,083,362 bytes** on each cartridge, against the 1995
+cartridge's **1,089** in the same run.
+
+**What crossed instead was the container.** `FPS4` is the archive on the
+*Vesperia* disc, big-endian, with a 0x1C header and a field mask saying which of
+four per-entry fields exist. It is here five months later on ARM,
+**little-endian**, with the same header and the same mask semantics — 2,492
+archives read against 2,493 magic hits. The byte order is the machine's and the
+structure is the line's, which is the nine-byte block header's own behaviour in
+reverse.
+
+So of the three things this corpus tracks — the codec, the packer's envelope,
+the container — each has now been seen crossing a console generation without the
+others. Between 2003 and the 2008 Wii disc the envelope and its compressor
+crossed and the codec did not; between *Vesperia* and these cartridges the
+container crossed and the codec did not.
+
+**And the platform's formats are here without the platform's code.** 5,280 BIOS
+streams *inside the containers*, 61,737,814 bytes becoming 123,245,746 — against
+**zero callers** of all six linked decompression wrappers over **43,946**
+resolved branch targets, with `CpuSet` at one and `Stop/Sleep` at seven so the
+instrument is shown to find callers where there are callers. At the file level
+the figure is 11 of 5,145, and quoting that would have described a different
+cartridge.
+
+**What it cannot say is who built it.** The developer is named **nowhere**, in
+ASCII, Shift-JIS or UTF-16LE, and the build was compiled with RTTI off — five
+C++ names in 2,852,064 bytes and all five the standard library's. What it
+carries is the tag **`TO9`**, in six file names, in a file extension of its own,
+and in a debug overlay's version banner four bytes from the build date
+`Nov 19 2008`. `TO7` is *Tales of the Abyss* and `TO8` is *Tales of Vesperia*.
+That is a number in the right place in a known sequence, and no hand attached to
+it. Section 8 records the difference rather than spending it.
+[nds-talesofhearts-doc](https://github.com/vs-sr-dev/nds-talesofhearts-doc).
+
 ## The result that showed whose format it was
 
 The same 2002 disc carries a second, unrelated game — a promotional build of
@@ -718,6 +803,7 @@ Dependency-free Python 3, one file, no imports beyond `sys`.
 | **Tales of Innocence** | **Nintendo DS** | **2007** | **no** — the **control**: another studio, same platform, and it compresses in the platform's own `LZ77` | [nds-talesofinnocence-doc](https://github.com/vs-sr-dev/nds-talesofinnocence-doc) |
 | **Ratatosk no Kishi** | **Wii** | **2008** | **no** — the direct sequel to the 2003 build, **same ISA**, **from inside the line** | [wii-talesofsymphoniadotnw-doc](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc) |
 | **Tales of Vesperia** | **Xbox 360** | **2008** | **yes**, methods 0 / 1 / 3 — the **1997 shape**, on a third compiler, beside XCompress | [xbox360-talesofvesperia-doc](https://github.com/vs-sr-dev/xbox360-talesofvesperia-doc) |
+| **Tales of Hearts** | **Nintendo DS** | **2008** | **no** — two cartridges, one build, five months after the build above; **`FPS4` crossed and the codec did not** | [nds-talesofhearts-doc](https://github.com/vs-sr-dev/nds-talesofhearts-doc) |
 | Tales of Phantasia | Game Boy Advance | 2003 | no — GBA BIOS `LZ77UnComp` | [snes-talesofphantasia-doc](https://github.com/vs-sr-dev/snes-talesofphantasia-doc) |
 | Tales of Berseria | PC | 2017 | no — zlib inside the TL engine | [pc-talesofberseria-doc](https://github.com/vs-sr-dev/pc-talesofberseria-doc) |
 

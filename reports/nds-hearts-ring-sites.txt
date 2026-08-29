@@ -1,0 +1,60 @@
+# ARM constant scan over 33 modules in _work/mod_anime
+# looking for 4070, 4071, 4078, 4079, 4080
+#
+# encodability as an ARM data-processing immediate:
+#    4070 (0xFE6)  NO   -- literal-pool word only
+#    4071 (0xFE7)  NO   -- literal-pool word only
+#    4078 (0xFEE)  NO   -- literal-pool word only
+#    4079 (0xFEF)  NO   -- literal-pool word only
+#    4080 (0xFF0)  YES  0xFF ror #28
+
+module          ARM imm  THUMB lit      words ldr targets  imm hit  thm hit word hit
+------------------------------------------------------------------------------------
+arm7              11911       5253      39882       1800        0        0        0
+arm9              45111      26436     186366       7175        3        0        4
+ovl9_000          14202      15562      74536       6547        0        0        0
+ovl9_001          43234      22853     146040       3587        0        0        0
+ovl9_002            326        112       1064         57        0        0        0
+ovl9_003          28953      12915      98200       3433        0        0        0
+ovl9_004              0          0          8          0        0        0        0
+ovl9_005           1233        518       3816        134        0        0        0
+ovl9_006           4215       1693      12048        286        0        0        0
+ovl9_007           2349        832       6048        178        0        0        0
+ovl9_008           3543       1286       9552        328        0        0        0
+ovl9_009           3395       1194       8904        321        0        0        0
+ovl9_010           1478        554       4184        129        0        0        0
+ovl9_011           3208       1227       8120        188        0        0        0
+ovl9_012           1577        671       4616        186        0        0        0
+ovl9_013           1785        729       5000        196        0        0        0
+ovl9_014           1320        460       3352         65        0        0        0
+ovl9_015            213         62       1800         27        0        0        0
+ovl9_016           2270        873       6056        129        0        0        0
+ovl9_017           3261       1225       8232        162        0        0        0
+ovl9_018           2683       1060       7176        214        0        0        0
+ovl9_019            835        460       4576        198        0        0        0
+ovl9_020           3224       1090       7912        215        0        0        0
+ovl9_021           3066       1841      16312        243        0        0        0
+ovl9_022           2376       1019       7120        236        0        0        0
+ovl9_023           1323        545       3504         57        0        0        0
+ovl9_024           1559        631       4152         60        0        0        0
+ovl9_025            646        224       1768         52        0        0        0
+ovl9_026            711        287       2008         66        0        0        0
+ovl9_027           2992       1293       8168        256        0        0        0
+ovl9_028           2235        937       5504        158        0        0        0
+ovl9_029           4710       1885      12568        277        0        0        0
+ovl9_030           1483        592       4424        173        0        0        0
+------------------------------------------------------------------------------------
+TOTAL            201427     106319     713016      27133        3        0        4
+
+# every hit, so that none is quoted without being read
+  arm9         ARM immediate      +0x081C3C  word 0xE2840EFF  value 4080  add r0,r4,#4080
+  arm9         ARM immediate      +0x088C3C  word 0xE2850EFF  value 4080  add r0,r5,#4080
+  arm9         ARM immediate      +0x096298  word 0xE201CEFF  value 4080  and r12,r1,#4080
+  arm9         literal-pool word  +0x0A7088  word 0x00000FF0  value 4080  
+      NOT the target of any PC-relative load in this module
+  arm9         literal-pool word  +0x0A70B0  word 0x00000FF0  value 4080  
+      NOT the target of any PC-relative load in this module
+  arm9         literal-pool word  +0x0A74E8  word 0x00000FF0  value 4080  
+      NOT the target of any PC-relative load in this module
+  arm9         literal-pool word  +0x0A7A60  word 0x00000FF0  value 4080  
+      NOT the target of any PC-relative load in this module
