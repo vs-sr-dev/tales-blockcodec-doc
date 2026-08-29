@@ -1755,9 +1755,35 @@ subclass of it sit in the engine's own namespace. `TL::CCaptureTexture` and
 
 Two absences belong in the same breath: `tlVec` and `tlMtx` are gone, and so
 is **`Flagment`**, the misspelling that would have been the cheapest possible
-proof. So `TL` on the Wii in 2009 and `TL` on the PlayStation 3 in 2011 are
-the same engine namespace by measurement; whether either is the codebase
-*Berseria* runs on in 2017 is still **Consistent** and untouched.
+proof.
+
+**And the far end closes, which this session did not expect.**
+[pc-talesofberseria-doc](https://github.com/vs-sr-dev/pc-talesofberseria-doc)
+publishes nine `TL` class names out of the 2017 PC build's plain data section,
+and **seven of the nine are on this 2011 disc**: `TL::CFileHeader`,
+`TL::DETAIL::tl_page_pool_policy` (46 as a whole name, 496 as a substring),
+`page_list`, `CPageBlockPool`, `CPageHeap`, `CRingBuffer`, and
+`TL::CFileManager` as `TL::CFileManager::SAccessCompare`. The one that carries
+it is `TL::DETAIL::tl_page_pool_policy` — a template policy name in lower case
+with underscores, in a `DETAIL` namespace, in a codebase whose classes are
+otherwise `CPascalCase`.
+
+**And the container crossed with it, by name.** *Berseria*'s containers are
+`FILEHEADER.TOFHDA`, **`FILEHEADER.TOFHDB`** and **`TLFILE.TLDAT`**; two of
+those three are this disc's two files, spelled identically six years earlier,
+with a 40-byte index record behind a 40-byte header where 2017 has 48 behind
+72 — a 32-bit layout re-emitted 64-bit, which is exactly what that repository
+independently reports about its `LANGUAGE.DAT`. Its XML reader still handles
+`<?xml version="1.0" encoding="Shift_JIS"?>`, and this disc's 42 MB debug
+index begins with that line. And the project numbers run unbroken: `TO11`
+here, `TO13` there, 234 `TO13.*` names exported to Lua.
+
+So the claim this document has carried at **Consistent** since the sixteenth
+build — *the 2009 `TL` and the 2017 `TL` are one codebase* — is **Verified**,
+on three independent kinds of evidence and with a measured middle. It is worth
+saying plainly what that does and does not settle: **the engine and the codec
+are separable.** This build has the engine, carries the line's project number
+as its root namespace, and has no codec at all.
 
 **Nothing crosses at the asset level, for the fifth time.** Zero
 byte-identical payloads between 92,660 distinct payloads here and the 7,905
@@ -1834,10 +1860,14 @@ corresponds across a renaming pass; twenty-five more are the engine's classes
 with this project's tag as a suffix, `TL::CWorldModelTO11` and its relatives.
 So `TL` on the Wii in 2009 and `TL` on the PlayStation 3 in 2011 are **one
 engine namespace, by measurement**, and the studio line was on it two years
-before *Berseria*. What is still unmeasured is the step from 2011 to 2017; the
-claim that *Berseria*'s TL engine is that codebase remains **Consistent**.
-What is not in doubt is that the engine and the codec are separable: this build
-has the engine, carries the line's project number, and has no codec at all.
+before *Berseria*. And the step from 2011 to 2017 is measured too: **seven of
+the nine `TL` class names that repository publishes are on the 2011 disc**,
+its container is the same `FILEHEADER.TOFHDB` / `TLFILE.TLDAT` pair under
+those exact names, and the project numbers run unbroken from `TO11` to `TO13`.
+The claim that *Berseria*'s TL engine is that codebase is therefore
+**Verified** rather than Consistent. What that does *not* settle is the codec:
+the engine and the codec are separable, and the 2011 build has the engine,
+carries the line's project number, and has no codec at all.
 
 ### The boundary tested off the console entirely
 

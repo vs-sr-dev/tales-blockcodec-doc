@@ -47,7 +47,13 @@ instruction words *and* over eight embedded SPU modules, and **0 blocks in
 213,683 payloads and 9,043,008,773 bytes**. What it compresses with instead is
 **LZMA**, in a thirty-one-byte envelope of the studio's own, on 28,867 of
 28,867 compressed members of a container with 151,862 of them. **Being inside
-the codebase stopped predicting the answer.**
+the codebase stopped predicting the answer.** That build also closed a claim
+this corpus had carried at *Consistent* since 2009: seven of the nine `TL`
+class names *Tales of Berseria* (2017) publishes are on the 2011 disc, its
+container files are `FILEHEADER.TOFHDB` and `TLFILE.TLDAT` under those exact
+names, and the project numbers run unbroken from `TO11` to `TO13` — so **the
+engine is one codebase from the Wii in 2009 to the PC in 2017, and the engine
+and the codec are separable.**
 
 → **[tales-block-codec.md](tales-block-codec.md)** — the specification
 → **[tales_block.py](tales_block.py)** — the reference decoder, both dialects
