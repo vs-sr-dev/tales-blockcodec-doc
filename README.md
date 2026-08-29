@@ -704,6 +704,41 @@ the *Venus & Braves* result above makes sharper still.
 
 ---
 
+## The result that put a negative back in its place
+
+The thirteenth build, *Tales of Symphonia: Ratatosk no Kishi* (Wii, 26 June
+2008), was this corpus's strongest negative: the Nintendo title from inside
+the studio line, on the same processor family as the only PowerPC positive,
+and it carried nothing. Its zero was compatible with three readings — the
+machine, the line, or that one project — and no build could separate them.
+
+**The sixteenth build separates them.** *Tales of Graces* (Wii, 10 December
+2009) is the same console, the same line and the same compiler, eighteen months
+later, and it carries the codec twice: one `4078` and one `4079` over 1,205,688
+PowerPC instruction words, the Metrowerks ring clear reaching 4,078 as
+`509 x 8 + 6`, both synthetic preload loops, `ori r9, r7, 0xFF00`, the
+twelve-bit mask, the high nibble placed by `rlwimi`, the run escape with its
+`+19` in the second copy, and **1,318 blocks** decoding to their declared
+length — all of them in the `psx` dialect and **1,162 of them decoding to an
+`FPS4` archive**.
+
+Both sides being Metrowerks PowerPC `.dol` files, the byte test has a
+denominator. 872 bytes of the 2003 GameCube decoder score **138** in it against
+**10** in *Ratatosk*, 12 and 10 in two unrelated Wii titles and 7 in its own
+apploader — symmetric in both directions, floor 7 to 8 — and the whole-file
+search that was never told where to look ranks the decoder **first through
+eighth** of the 77 regions the two builds share.
+
+So the machine is excluded, the line is excluded and the compiler is excluded.
+The 2008 zero is a fact about the 2008 project.
+
+Three other things move with it. The `MSCF` envelope that the 2003 and 2008
+discs both wear returns **zero hits on 4.29 GB**. `FPS4` — which neither Wii
+build's predecessor had — arrives, 4,832 archives, big-endian. And the build
+**names its developer**, which no build of this line in this corpus had done:
+`take_njd@namco-talesstudio.co.jp`, in the support block of a complete in-house
+*Character Parts Editor* shipped on the retail disc.
+
 ## Verification
 
 `tales_block.py` is one ring machine with a dialect switch. It was checked
@@ -804,6 +839,7 @@ Dependency-free Python 3, one file, no imports beyond `sys`.
 | **Ratatosk no Kishi** | **Wii** | **2008** | **no** — the direct sequel to the 2003 build, **same ISA**, **from inside the line** | [wii-talesofsymphoniadotnw-doc](https://github.com/vs-sr-dev/wii-talesofsymphoniadotnw-doc) |
 | **Tales of Vesperia** | **Xbox 360** | **2008** | **yes**, methods 0 / 1 / 3 — the **1997 shape**, on a third compiler, beside XCompress | [xbox360-talesofvesperia-doc](https://github.com/vs-sr-dev/xbox360-talesofvesperia-doc) |
 | **Tales of Hearts** | **Nintendo DS** | **2008** | **no** — two cartridges, one build, five months after the build above; **`FPS4` crossed and the codec did not** | [nds-talesofhearts-doc](https://github.com/vs-sr-dev/nds-talesofhearts-doc) |
+| **Tales of Graces** | **Wii** | **2009** | **yes**, methods 0 / 1 / 3 — the **1997 shape again**, on the machine the 2008 build dropped it on; 138 bytes shared with the 2003 decoder | [wii-talesofgraces-doc](https://github.com/vs-sr-dev/wii-talesofgraces-doc) |
 | Tales of Phantasia | Game Boy Advance | 2003 | no — GBA BIOS `LZ77UnComp` | [snes-talesofphantasia-doc](https://github.com/vs-sr-dev/snes-talesofphantasia-doc) |
 | Tales of Berseria | PC | 2017 | no — zlib inside the TL engine | [pc-talesofberseria-doc](https://github.com/vs-sr-dev/pc-talesofberseria-doc) |
 

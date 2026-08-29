@@ -328,6 +328,7 @@ from the 1997 code only where the 1997 code is wrong.
 | **Tales of Symphonia: Ratatosk no Kishi** | **Wii** | **2008** | **no** — the direct sequel to the 2003 build, **same instruction set**, from **inside the line** |
 | **Tales of Vesperia** | **Xbox 360** | **2008** | **this format**, methods 0 / 1 / 3 — the **1997 shape again**, six weeks after the build above, on a **third compiler**, beside XCompress |
 | **Tales of Hearts** | **Nintendo DS** | **2008** | **no** — two cartridges, one build, five months after the build above; the container `FPS4` crossed and the codec did not |
+| **Tales of Graces** | **Wii** | **2009** | **this format**, methods 0 / 1 / 3 — the **1997 shape again**, on the machine the 2008 build dropped it on, eighteen months later |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
 
 ### The 2000 build is not a reimplementation
@@ -1396,6 +1397,165 @@ line builds that carry the codec. That is the whole of the lineage evidence: a
 number in the right place in a known sequence, and no hand attached to it.
 [nds-talesofhearts-doc](https://github.com/vs-sr-dev/nds-talesofhearts-doc).
 
+### The sixteenth build is the control the thirteenth asked for, and it inverts it
+
+*Tales of Graces* (Nintendo Wii, 10 December 2009, Japan, `STGJAF`) is the
+second build in this corpus on that machine and the first opened for the
+express purpose of testing another build's negative. *Tales of Symphonia:
+Ratatosk no Kishi* shipped eighteen months earlier on the same console, from
+the same studio line, and carried no codec; its zero was compatible with the
+boundary being the Wii, the line, or that one project.
+
+**It was that one project.** This disc carries the codec, twice.
+
+The conditions were the best this corpus has ever had for asking. Both this
+build and the 2003 GameCube one are **Metrowerks CodeWarrior PowerPC `.dol`
+files**, so the byte test has a denominator here in the way it does not
+between the GameCube and the Xbox 360; PowerPC encodes all five cursor
+constants in a single D-form immediate, so the constant scan is a complete
+search with no second pass; and the structural probe has a same-toolchain
+positive to be calibrated against in the same session.
+
+**The constant scan.** One `4078` and one `4079`, in two routines, over
+**1,205,688** PowerPC instruction words in `main.dol`'s text and 1,822,601
+across every image on the disc — against the 2008 Wii build's 637,871 words
+and zero, the 2003 GameCube build's 383,328 words with six of each in four
+routines, and *Vesperia*'s 3,989,504 with two of each in one pair. Both hits
+are 223 and 224 words into their routines, so the tenth build's warning
+applies and both were walked from their prologues.
+
+Both routines are the 1997 shape entire: a ring clear that reaches 4,078 as
+`509 x 8 + 6`, **both synthetic preload loops**, `ori r9, r7, 0xFF00`,
+`rlwinm r11, r11, 0, 20, 31`, the low nibble with its `+2`, the high nibble
+placed by `rlwimi`, and in the second routine the run escape with its `+19`.
+The two differ in cursor -- **4078 in one and 4079 in the other, in one
+executable from one compilation** -- and the difference tracks the method
+rather than the build, which is new.
+
+**All eleven `4080` sites on the disc were disassembled**, in six routines,
+and none is the codec's: four structure-member offsets, a stack-array bound
+check linked into two images, and one that is not a constant at all -- `lis
+r21, 0x803A ; addi r4, r21, 4080` is the address `0x803A0FF0`. That last is a
+way for `4080` to appear that this document had not recorded, and it is
+available on every PowerPC build.
+
+**The strong test, with its controls.** 872 bytes of the 2003 decoder score
+**138** in this executable, against 10 in *Ratatosk*, 12 in *The Last Story*,
+10 in *Crystal Bearers* and 7 in this disc's own apploader; the measurement is
+symmetric, 138 back the other way against 8, 8, 8 and 7. And `common_run.py`,
+handed the whole of each executable and told nothing, enumerates 77 shared
+regions of at least 48 bytes and **ranks the decoder first through eighth**,
+pairing all four of the 2003 build's copies against both of this build's. The
+ninth region is 107 bytes and is not the decoder.
+
+Two honesty notes belong with that number. The plain answer without controls
+subtracted is 1,275 bytes of Nintendo boot code with 22 distinct byte values,
+worthless. And the winning 138-byte run has **12 distinct byte values** where
+the 107-byte runner-up has 38: it is the preload loop's unrolled store
+sequence, so it is low entropy and the margin over the best unrelated run is
+29 bytes. What makes it evidence is that it sits at the same functional place
+in a routine the constant scan found independently, and that the pairing is
+four-by-two. **Which of the 2003 build's four copies it descends from is not
+answerable**: all four score 138, which is what two pairs of one object pulled
+in twice predicts.
+
+Between the 2003 and 2008 builds the runtime control returned 835 bytes of
+`OSSaveFPUContext`. Between 2003 and this build there is no such run -- the
+best non-decoder region is 107 bytes. Six years and two SDK generations moved
+the C runtime; the decoder's preload loop did not move.
+
+**And the structural probe returned a false negative on a true positive.**
+Run as this document's own pipeline carried it, it reported **zero control
+refills and zero high-nibble extracts** on a build whose decoder had already
+been disassembled in the same session. It required `rA == rS` on the refill --
+the fourteenth build's Xbox 360 correction, never carried into the Wii copy of
+the file -- and `rlwinm` on the extract, where this compiler writes `rlwimi`.
+Taught both spellings it finds two clusters, one per decoder copy, and **two
+`rlwimi` inserts on the 2003 build that had been missed since 2003**. Section
+7.
+
+**What it keeps and what it drops.** The `MSCF` envelope that the 2003 and
+2008 discs both wear returns **zero hits on 4.29 GB**, and `5b 80 80 8d`
+returns one, inside high-entropy payload, located and read. What the assets
+sit in instead is **`FPS4`**: 8,064 magic hits and 4,832 archives in the
+extracted tree, big-endian as on *Vesperia* and unlike *Hearts*. And the codec
+is used for structure rather than bulk, exactly as on *Vesperia*: **71 of 71**
+whole-file blocks begin with the control byte `0xAF` and the literals
+`F P S 4`, 28,783,901 packed producing 61,939,072, against 2.69 GB that CRI's
+`CPK` and `CRILAYLA` carry.
+
+So this build **has the codec and the container and not the envelope** --
+which is *Vesperia*'s arrangement, arriving on the machine where the envelope
+had survived and the codec had not.
+
+**It also carries a project number, and unlike the fifteenth build it carries
+a hand as well.** `TO10` is in nineteen distinct spellings in `main.dol`: a
+devkit path `sim:C:/usr/TO10/data/btl/`, sixteen menu-task names, a version
+banner `TO10_chat_v0.50`, and the file name of a complete Nintendo DS ROM the
+disc ships; plus two class names in the modules' symbol tables and a twentieth
+spelling, `TO10DS`, in that ROM's own banner. `TO7` is *Abyss*, `TO8` is
+*Vesperia*, `TO9` is *Hearts*, and no other `TOn` and no `top2` appears
+anywhere.
+
+The hand is in `/module/chr_moduleRR.rso`, which ships a complete in-house
+tool on the retail disc -- a **Character Parts Editor [ROM Version]** with
+`chr_edit.cpp`, a Debug/Release toggle, fifty-four editor map paths and a
+five-part NPC -- and whose support block reads
+
+```
+take_njd@namco-talesstudio.co.jp
+http://intra/cgi-bin/BBS2/cyclamen.cgi?log=program
+http://intra/cgi-bin/BBS2/cyclamen.cgi?log=character
+```
+
+a mailbox at **Namco Tales Studio's own corporate domain** and two boards on
+the studio's intranet. Seventeen bytes on a four-gigabyte medium; the chance
+rate is 1e-32. This is the first build of this line in this corpus that names
+its developer at all. It was also compiled with **RTTI on** -- 195
+class-and-namespace strings where *Ratatosk* had 37 and all of those the
+SDK's -- and its eight relocatable modules carry **2,347 CodeWarrior-mangled
+symbols**, among them `TO10_INPUT` and `TO10_SAVE` as class names.
+
+Twenty-six of the 195 are in a **`TL`** namespace, with a vector type `tlVec`,
+a matrix type `tlMtx` and a file layer of its own. This document has met that
+name once, in *Tales of Berseria* (PC, 2017). Here it is in 2009. That the two
+are one codebase is **not measured** and is recorded as Consistent.
+
+**Towards Ratatosk, which is the comparison this build exists to make.** Same
+machine, same line, eighteen months. Running the identical descent over both
+discs and comparing every payload by SHA-1: **five byte-identical files, and
+all five are Nintendo's Home Menu overlay**. The internal-name intersection is
+read rather than counted -- on 6.5 GB the harvester lifts uppercase runs out of
+compressed data by chance -- and what survives the filter is 374 Home Button
+resources, 138 romaji skeleton names (`BONE_ASHI_02_L`, `IK_UDE_R`) and 51
+generic effect words. **Not one asset of the studio's own is common to both.**
+The total-reconstruction habit holds; what a bare zero would have hidden is
+that the *rigging convention* crossed.
+
+**And one project shipped on two machines here, with the codec on one.**
+`/ds/to10dsR.srl` is a complete Nintendo DS ROM, 1,236,168 bytes, game title
+`ToG_DS`, banner `TO10DS`, sent to a handheld by DS Download Play -- so step
+zero applies in the middle of a Wii disc, its ARM9 is `BLZ`-packed, and
+decompressed it carries **zero 4078 / 4079 / 4070 / 4071 in either ARM
+encoding** over 67,002 ARM immediates, 98,937 THUMB literals, 376,970 aligned
+words and 16,081 distinct load targets, with zero fingerprint clusters.
+
+**And the census.** Every payload at every level of the descent, tested at its
+own offset zero in both dialects, is a complete pass and it finds **1,318
+blocks**: 49,487,401 packed producing 97,545,122, methods 0 / 1 / 3 in
+69 / 108 / 1,141, smallest 67 packed and largest 2,936,547, every one in the
+`psx` dialect, **1,162 of them decoding to an `FPS4` archive** and ten to an
+`iPck` sound pack. The stored
+path is back in bulk after *Abyss*'s zero in 47,513 and *Vesperia*'s one in
+8,255: **69 method-0 blocks**, and they are exactly the 69 whose packed size is
+not less than their unpacked size. The blind pass, which asks the wider
+question, does not finish on this disc and its coverage is published as a
+figure rather than rounded up; the reason it does not finish is a property of
+the data and is in section 7.
+
+What this does to the shape of section 8 is written there.
+[wii-talesofgraces-doc](https://github.com/vs-sr-dev/wii-talesofgraces-doc).
+
 ### The boundary tested on a single disc
 
 The *Tales of Destiny 2* disc is the sharpest negative control this
@@ -2398,6 +2558,174 @@ run the scanner over something known to contain the thing, and on a DS target
 the middleware supplies it for free -- CRI stamps `Build: Aug 26 2008 16:33:56`
 into the ARM9 and any date scanner that cannot see that is broken.
 
+### The unrolled ring clear can hide two of the five constants
+
+The tenth build added `4070` and `4071` to the scan because a ring clear
+unrolled by eight puts the loop *bound* in the image and leaves `4078` or
+`4079` as the cursor, a hundred words further down. That correction assumed
+the bound reaches the image as a byte count.
+
+**On Metrowerks PowerPC it does not.** The sixteenth build unrolls the clear by
+eight and writes it as an iteration count:
+
+```
+li    r0, 509
+mtspr ctr, r0
+stbx  ...            eight stores per iteration    509 x 8 = 4072
+bc    16,0,...
+stb   ...            and six more                  4072 + 6 = 4078
+```
+
+so the scan returns **zero 4070 and zero 4071 on a build that plainly unrolls
+the loop**, and the only constant in the image is the cursor. That is not a
+problem while the cursor is there. It becomes one for any build that clears
+the ring this way and initialises its cursor some other way -- by a `memset`
+with the count in a register, say -- because then all five constants are
+absent from a build that contains the decoder. No such build is known, and the
+possibility should be stated rather than discovered.
+
+Two more ways `4080` can appear, both from the same disc, both innocent and
+both disassembled:
+
+* **the low half of a static address.** `lis rX, 0x803A ; addi rY, rX, 4080`
+  is the address `0x803A0FF0`, and it is written with exactly the instruction
+  the scan looks for. Every PowerPC build offers this and it had not been
+  recorded;
+* **a stack-array bound.** `stwu r1, -7952(r1) ; addi r0, r1, 4080 ; cmplw r6, r0`
+  is a loop over a local buffer, and it is linked into two images on that disc,
+  so it counts twice.
+
+### The structural probe's registers *and* its opcodes
+
+The fourteenth build taught this probe that the control-register refill may be
+written with a separate destination. The sixteenth adds the other half of the
+same lesson and it is worse, because it fired on a build this document had
+already read:
+
+```
+Metrowerks GameCube 2003   ori    r0,  r0,  0xFF00      refill, in place
+Metrowerks Wii 2009        ori    r9,  r7,  0xFF00      refill, split
+MSVC Xbox 360 2008         ori    r31, r11, 0xFF00      refill, split
+
+GameCube 2003              rlwinm r9,  r9,  4, 20, 23   ref hi, extracted
+Wii 2009                   rlwimi r10, r25, 4, 20, 23   ref hi, inserted
+```
+
+`rlwinm` and `rlwimi` are different opcodes -- 21 and 20 -- doing the same job
+in the decoder: one extracts the high nibble into a cleared register, the other
+inserts it into a register that already holds the low byte. A probe that
+requires one of them scores **zero high-nibble extracts on a build that
+contains two**, and combined with the register requirement it scored zero
+refills as well. On *Tales of Graces* that is a false negative on a true
+positive whose decoder had been disassembled ten minutes earlier.
+
+Taught both opcodes, the probe also finds **two `rlwimi` inserts on the 2003
+GameCube build** that had been missed since that build was opened.
+
+The general rule the two builds together give: **do not require a register
+relation, and do not require one opcode where the instruction set offers two.**
+A fingerprint is a constant and an operation; the encoding is the compiler's.
+
+`--selftest`, which the fifteenth build added on ARM, is now on the PowerPC
+probe too: it hand-assembles every fingerprint in every form the probe looks
+for and checks the detector fires. Twelve of twelve, and two of the twelve
+assemble to the exact words the disassembly shows.
+
+### And on PowerPC the refill has no innocent twin
+
+The fifteenth build found that on ARM the refill's instruction is also what a
+compiler emits to sign-extend a byte, so a probe counting the bare instruction
+reported eight refills on a cartridge with none. That does not transfer, and
+this document should say so rather than leave it assumed: on PowerPC sign
+extension is `extsb` or `extsh`, single instructions with their own opcodes,
+and `ori rA, rS, 0xFF00` sets the high byte of a halfword with no other routine
+reason to exist. On the sixteenth build both occurrences are inside the two
+decoder routines; on the 2003 build all fourteen are inside its four. The
+count means on this machine what this document has always assumed it means.
+
+### The container may belong to the middleware, and then the census stops early
+
+Every container this document has had to descend so far belonged to the studio
+or to the platform. The sixteenth build's belongs to **CRI**, and it changes
+the shape of the failure.
+
+*Tales of Graces* has **forty files** in its Wii file system and three of them
+hold 2.69 GB. A census that stops at the file system reports a build with no
+assets and raises no error. Inside are sixty-five `CPK ` containers -- three at
+the top and sixty-two nested one level down, one per region of the world --
+holding 8,466 members and 6.5 GB of plaintext.
+
+Three properties of that container are worth carrying, because each one fails
+silently:
+
+* **`@UTF`, CRI's table format, stores a column per row, once for the whole
+  table, or not at all.** A `CPK` whose `DirName` is constant stores it once; a
+  reader expecting a per-row field reports every member with no path.
+* **the member compressor is `CRILAYLA` with its eight magic bytes overwritten
+  with zeros.** The string `CRILAYLA` returns **zero hits on the whole 4.29 GB
+  partition**. A reader keyed on the magic reports every packed member as an
+  unknown format and hands the packed bytes downstream -- a smaller census with
+  no error in it. Read the container's declared sizes, not the payload's magic.
+* **and the container states each member's plaintext length**, in
+  `ExtractSize`, written by the packer and by nothing of ours -- so the
+  decompressor has a free positive control of exactly the kind the Nintendo DS
+  overlay table gives. **7,115 of 7,115** on that disc.
+
+
+Two more things the sixteenth build adds to the descent list, both of them
+places the codec lives that no previous build had:
+
+* **`SPKD`**, a big-endian sound-pack directory of nineteen named entries whose
+  last word is a block offset. Its blocks do not begin at offset zero of any
+  payload the other levels produce, so a boundary-only census cannot see them;
+  the blind pass found them as a **family of ten in one file**, which is the
+  distinction this document keeps making — real blocks come in families and
+  chance survivors come alone. Reading the directory instead of sweeping for
+  them turned ten found by luck into ten found by structure.
+* **and the block's plaintext is not always another archive.** On the
+  fourteenth build every top-level block stream opened an `FPS4`. Here 1,162 of
+  1,318 do and ten open an `iPck` sound pack, so the rule is *the codec wraps a
+  container* rather than *the codec wraps `FPS4`*.
+
+### A media census that knows two formats reports no media
+
+The same shape again, in the tool that answers *how much of this is audio and
+video*. The version this pipeline carried from the 2008 Wii disc parses `RSTM`
+and `THP`. The 2009 Wii disc has neither -- its thirteen movies are CRI
+**Sofdec** MPEG-2 program streams and its audio is CRI **ADX/AHX** inside the
+containers -- and run unchanged it printed *media share of the file system:
+0.00%* on a disc that is **33.30% video**.
+
+The property that saved 230 MB of music on the fourteenth build is the one to
+keep: **name what you cannot parse**. A census that prints an explicit table of
+unrecognised first-four-bytes shows a missing parser as a row; one that skips
+them shows it as an absence.
+
+And one more, because the corrected tool's first answer was also wrong:
+**count over every byte, not over a header sample**. Counting MPEG-2 picture
+start codes in the first four megabytes of a 200 MB film reports five minutes
+of video as six seconds, and the number looks perfectly reasonable.
+
+### A blind sweep can be defeated by the data rather than by the buffer
+
+Section 7 already says to sweep per member so `plausible()` has a bound to work
+with. The sixteenth build shows that the bound is not always enough, and that
+the cost is a property of the *content*:
+
+| payload | bytes | sweep time |
+|---|---:|---:|
+| a compiled scene, `basi_d01.so` | 315,148 | **34 s** |
+| a vertex block, `BASI_D03_01.SPV` | 349,312 | 3.6 s |
+| an ordinary texture of the same size | ~300,000 | < 0.1 s |
+
+Nine kilobytes a second, inside a 300 KB buffer where the plausibility bound is
+tight. The reason is that dense arrays of small integers produce many
+candidates that pass the header filter and each one costs a decode attempt.
+So a per-member sweep can still fail to finish on a build whose members are
+small, and the honest response is the one this document already prescribes for
+the other case: **partition the work and publish the exact coverage**, rather
+than quote a total that was never reached.
+
 ### What does *not* work: comparing routines across instruction sets
 
 The opcode-sequence measure in this repository's own tooling works because
@@ -2480,13 +2808,25 @@ instead. See
   decompressed first**, and **0 blocks in 47,195 payloads and 376,083,362
   bytes** under the same unmodified decoder against the same 1,089-block
   control — on each of the **two cartridges** that shipped that day, which are
-  one build and 28,662 byte-identical payloads of 28,679. Two dialects, fifteen
-  builds, eight platforms, both byte orders, three compilers, thirteen years,
-  and the split is still 1995/1997.
+  one build and 28,662 byte-identical payloads of 28,679. The sixteenth,
+  *Tales of Graces* (Wii, 10 December 2009), adds none either, and it is the
+  first build in three to add none because it **has** the format: one `4078`
+  and one `4079` in two routines out of **1,205,688** PowerPC instruction
+  words, the Metrowerks ring clear reaching 4,078 as `509 x 8 + 6`, both
+  synthetic preload loops, `ori r9, r7, 0xFF00`, the twelve-bit mask, the high
+  nibble placed by `rlwimi`, the run escape with its `+19` in the second copy,
+  and **1,318 blocks decoding to their declared length** — 49,487,401 packed
+  producing 97,545,122 — every one of them in the `psx` dialect and not one in
+  the other. It is also the first build in the corpus where **two copies in one
+  executable use different cursors**: 4078 in the copy without the run escape
+  and 4079 in the copy with it. Two dialects, sixteen builds, eight platforms,
+  both byte orders, three compilers, fourteen years, and the split is still
+  1995/1997.
   What is left to test is the 2005 PSP port of *Eternia*, the 2006 PlayStation 2
-  remake of *Destiny*, *Radiant Mythology* (PSP, 2006) — and, now that the far
-  edge of the 2005-to-2008 interval is closed from inside, the 2009 PlayStation
-  3 port of *Vesperia*, which is the next place the codec could stop.
+  remake of *Destiny*, *Radiant Mythology* (PSP, 2006), the 2009 PlayStation 3
+  port of *Vesperia*, and — after the sixteenth build — the 2011 PlayStation 3
+  *Tales of Graces f*, which is one of these projects on a second machine, and
+  *Xillia* (PS3, 2011), which the project-tag sequence predicts as `TO11`.
 * **~~Was the source ever edited after 1997?~~** *Answered, and then
   re-answered.* The first answer was "yes, once, in 2004". *Tales of Rebirth*,
   three months after *Symphonia*'s PlayStation 2 port and on the same R5900,
@@ -2831,7 +3171,11 @@ instead. See
   what happened between the 2003 GameCube disc and the 2008 Wii disc, where the
   envelope and its compressor crossed and the codec did not. Both times exactly
   one of {codec, container} made the journey, and it was a different one each
-  time.
+  time. The sixteenth build breaks even that symmetry: from *Ratatosk* to
+  *Graces*, on one machine and one studio line, **both** the codec and the
+  container arrive and the envelope leaves. So the three are not a set that
+  trades one member per generation; they are three independent choices, and
+  what decides them is the project.
 
   **What it cannot do is name the hands, and that has to be said in the same
   breath as the tag.** These cartridges name their developer **nowhere** — not
