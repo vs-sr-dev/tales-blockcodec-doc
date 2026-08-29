@@ -34,7 +34,20 @@ build with two sets of films, carrying the project number **after** *Vesperia*'s
 — **without the codec**, and with *Vesperia*'s own container `FPS4`, header for
 header and field mask for field mask, byte order turned round to suit the
 machine. **The codebase is the boundary, there is no date, the thing that
-varies is the packer — and the container travels on its own.**
+varies is the packer — and the container travels on its own.** Eighteen months
+after *Hearts*, *Tales of Graces* put the codec back on the Wii and settled
+that the 2008 zero had been about one project rather than the machine, the
+line or the compiler. And in 2011 *Tales of Xillia* shipped on the PlayStation
+3 — the first build inside the gap between that disc and 2017, on the first
+machine here with **two instruction sets in one executable** — carrying the
+line's project number `TO11` as the root C++ namespace of the whole game, the
+`TL` engine namespace with one class name identical to the 2009 build's, and
+**no codec at all**: zero of the five constants over 3,685,471 PowerPC
+instruction words *and* over eight embedded SPU modules, and **0 blocks in
+213,683 payloads and 9,043,008,773 bytes**. What it compresses with instead is
+**LZMA**, in a thirty-one-byte envelope of the studio's own, on 28,867 of
+28,867 compressed members of a container with 151,862 of them. **Being inside
+the codebase stopped predicting the answer.**
 
 → **[tales-block-codec.md](tales-block-codec.md)** — the specification
 → **[tales_block.py](tales_block.py)** — the reference decoder, both dialects
@@ -67,6 +80,18 @@ single-pass scan's silence is not a negative. Section 7 carries the two-pass
 variant and
 [`ring_sites.py`](https://github.com/vs-sr-dev/nds-talesofthetempest-doc/blob/main/tools/ring_sites.py)
 now covers MIPS, PowerPC and ARM/THUMB in one file.
+
+The **SPU** splits them a third way, and the eighteenth build is where that had
+to be written down. Its RI10 form — `ai`, `ahi`, `andi`, `ori`, `ceqi` — carries
+a signed ten-bit field reaching only -512 to 511, so **none of the five fits**;
+they reach `il` and `iohl` (16 bits) and `ila` (18). And `lqd`/`stqd` carry a
+ten-bit displacement **scaled by sixteen**, which reaches **4080 and nothing
+else of the five** — which matters, because 4080 is 4078 rounded up to a
+multiple of sixteen, exactly the edit the 2004 PlayStation 2 build made for a
+quadword store, and the SPU has nothing but quadword stores.
+[`ring_sites.py --spu`](https://github.com/vs-sr-dev/ps3-talesofxillia-doc/blob/main/tools/ring_sites.py)
+runs three passes and prints all three denominators, and it carries a
+`--selftest` from its first day.
 
 Each *Tales* title I document produces two things: a repository about that
 build, and whatever it taught me about formats that are not specific to it.
@@ -770,6 +795,10 @@ buffer, the PlayStation ones a ring — and on the 2002 PlayStation 2 disc it
 | 2008 *Vesperia* corpus, unmodified reference decoder, **through four levels of container** | **8,255 / 8,255** blocks exact, 337,852,435 → 775,930,739, across XDVDFS files, `FPS4` archives, nested `FPS4` and block plaintexts; the control in the same tooling returns **1,089** |
 | 2003 GameCube decoder against the 2008 Xbox 360 build, **one instruction set, two compilers** | **10 bytes** — and the whole-image control finds a ceiling of **28**, so the ten is quoted against an unavailable test and means nothing |
 | 2008 *Vesperia* decoder against three unrelated Xbox 360 titles, **byte equality demonstrated** | **17 / 17 / 16** bytes, while *Vesperia* and *Eternal Sonata* share **304** contiguous bytes of code no tri-Ace title has |
+| 2011 *Xillia* constant scan, **PowerPC, PS3 SDK compiler, decrypted SELF** | **0** x 4078 / 4070 / 4071 over **3,685,471** instruction words; four 4079 and eighteen 4080 sites all disassembled and all innocent, [ps3-talesofxillia-doc](https://github.com/vs-sr-dev/ps3-talesofxillia-doc) |
+| 2011 *Xillia* constant scan, **SPU, eight embedded modules** | **0** x all five in every encoding that can hold them, against **4,400** RI16, **481** RI18, **7,935** quadword displacements and **218,352** aligned words -- the first second-instruction-set scan in this corpus |
+| 2011 *Xillia* corpus, unmodified reference decoder, **9.04 GB** | **0 blocks** in **213,683 payloads and 9,043,008,773 bytes**, both dialects, `undescended` **0** -- every container member, every Bink frame and every gap; the control in the same session returns **1,089** |
+| 2009 Wii decoder against the 2011 PlayStation 3 build, **two PowerPC word sizes** | **8 bytes**, against a same-file control of **20** -- and the whole-image ceiling is **96 bytes of six distinct values**, `li r3,0 ; blr` twelve times, so the test has no denominator and the eight is not quoted as evidence |
 | 2002 decoder against 1997 and 2000, instruction by instruction | 0 identical words, ~50% opcode sequence; control reproduces 212 bytes, [`reports/ps2-lineage.txt`](reports/ps2-lineage.txt) |
 | Self-test, no image needed — the two dialects' run arithmetic | 4–18 and 19–274 **agree across dialects**, [`reports/selftest.txt`](reports/selftest.txt) |
 | Exhaustive scan of the 6 MiB Super Famicom image | **1,089 blocks**, 115 `$81` + 974 `$83`, every one decoding to its declared length |
@@ -840,6 +869,7 @@ Dependency-free Python 3, one file, no imports beyond `sys`.
 | **Tales of Vesperia** | **Xbox 360** | **2008** | **yes**, methods 0 / 1 / 3 — the **1997 shape**, on a third compiler, beside XCompress | [xbox360-talesofvesperia-doc](https://github.com/vs-sr-dev/xbox360-talesofvesperia-doc) |
 | **Tales of Hearts** | **Nintendo DS** | **2008** | **no** — two cartridges, one build, five months after the build above; **`FPS4` crossed and the codec did not** | [nds-talesofhearts-doc](https://github.com/vs-sr-dev/nds-talesofhearts-doc) |
 | **Tales of Graces** | **Wii** | **2009** | **yes**, methods 0 / 1 / 3 — the **1997 shape again**, on the machine the 2008 build dropped it on; 138 bytes shared with the 2003 decoder | [wii-talesofgraces-doc](https://github.com/vs-sr-dev/wii-talesofgraces-doc) |
+| **Tales of Xillia** | **PlayStation 3** | **2011** | **no** — inside the 2009-2017 gap, on the first target here with **two instruction sets**; carries the `TL` engine and the tag `TO11`, and compresses with **LZMA** in an envelope of its own | [ps3-talesofxillia-doc](https://github.com/vs-sr-dev/ps3-talesofxillia-doc) |
 | Tales of Phantasia | Game Boy Advance | 2003 | no — GBA BIOS `LZ77UnComp` | [snes-talesofphantasia-doc](https://github.com/vs-sr-dev/snes-talesofphantasia-doc) |
 | Tales of Berseria | PC | 2017 | no — zlib inside the TL engine | [pc-talesofberseria-doc](https://github.com/vs-sr-dev/pc-talesofberseria-doc) |
 

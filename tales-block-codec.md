@@ -329,6 +329,7 @@ from the 1997 code only where the 1997 code is wrong.
 | **Tales of Vesperia** | **Xbox 360** | **2008** | **this format**, methods 0 / 1 / 3 — the **1997 shape again**, six weeks after the build above, on a **third compiler**, beside XCompress |
 | **Tales of Hearts** | **Nintendo DS** | **2008** | **no** — two cartridges, one build, five months after the build above; the container `FPS4` crossed and the codec did not |
 | **Tales of Graces** | **Wii** | **2009** | **this format**, methods 0 / 1 / 3 — the **1997 shape again**, on the machine the 2008 build dropped it on, eighteen months later |
+| **Tales of Xillia** | **PlayStation 3** | **2011** | **no** — the first build inside the 2009–2017 gap, on the first machine here with **two instruction sets**; its compressor is **LZMA** in an envelope of its own, and the `TL` engine and the tag `TO11` are both on it |
 | Tales of Berseria | PC | 2017 | **no** — zlib inside the TL engine's own container |
 
 ### The 2000 build is not a reimplementation
@@ -1556,6 +1557,250 @@ the data and is in section 7.
 What this does to the shape of section 8 is written there.
 [wii-talesofgraces-doc](https://github.com/vs-sr-dev/wii-talesofgraces-doc).
 
+### The eighteenth build is inside the 2009–2017 gap, and it has two processors
+
+*Tales of Xillia* (PlayStation 3, 8 September 2011, Japan/Asia, `BLJS-10120`)
+is the first build in this corpus between *Tales of Graces* (December 2009)
+and *Tales of Berseria* (2017), and the first on a machine with **two
+instruction sets in one executable**. Its disc image is 6,949,961,728 bytes,
+the largest here.
+
+**It does not carry the codec.** What it carries instead is the studio's own
+LZMA envelope, the `TL` engine's namespace, and the project tag `TO11`.
+
+**Step zero is two steps on this platform and the first one is the reverse of
+what it looked like.** A PlayStation 3 disc's sector 0 is a **region table**
+declaring which sectors are AES-encrypted; this one declares **96.07%**, and
+none of it is. The image is a decrypted dump that kept its original table, and
+that is a measurement rather than an inference: `EBOOT.BIN` begins `SCE\0`,
+the debug index begins `<?xml`, and **17 of 17 Bink movie headers state a body
+length exactly equal to the ISO 9660 directory's size for that file, less
+eight**. Ciphertext does not do that seventeen times.
+
+**And the obvious check is worthless here**, which is a correction section 7
+now carries. Sampling entropy at eight points per region, the declared-*plain*
+regions reach **7.992** and **8.000** bits per byte and the
+declared-*encrypted* one never exceeds **7.987**: region 0's high samples are
+a PNG and an ATRAC3 stream, region 2's is Sony's firmware installer. On a 2011
+disc, entropy measures the middleware. Nor does the first sector of the
+encrypted region prove anything — it is `LIC.DAT`, which begins `PS3LICDA` in
+the clear on every PS3 disc ever pressed.
+
+**The second step zero was real and it opened.** `EBOOT.BIN` is a signed
+`SELF`, key revision `0x13`, with its two loadable segments AES-128-CTR
+encrypted (7.997 bits/byte) and — against expectation on a platform whose own
+container format deflates — **not compressed**. Recovering it is AES-256-CBC
+for the metadata info, AES-128-CTR for the metadata headers and again for the
+segments, and the free check is that the metadata info's key and IV are each
+followed by sixteen bytes that **must be zero**. They are. The recovered image
+is **14,810,328 bytes**, ELF64 big-endian, `e_machine` 21, and it passes the
+Xbox 360 pipeline's test: begins `\x7fELF`, 8 of 8 program headers inside the
+file, 32 of 32 sections with plausible virtual addresses.
+
+**The constant scan, on the first instruction set.** PowerPC encodes all five
+constants in a D-form immediate, so this is a complete search:
+
+| | Wii 2008 | GC 2003 | X360 2008 | Wii 2009 | **PS3 2011** |
+|---|---:|---:|---:|---:|---:|
+| instruction words | 637,871 | 383,328 | 3,989,504 | 1,205,688 | **3,685,471** |
+| **4078** | 0 | 6 | 2 | 1 | **0** |
+| **4079** | 0 | 6 | 2 | 1 | **4** |
+| 4070 / 4071 | 0 | 0 | 0 | 0 | **0** |
+| 4080 | 20 | 25 | 0 | 11 | **18** |
+
+All twenty-two sites were disassembled. The four `4079` are `cmpwi rX, 4079`
+each immediately after `addi rX, rX, 1` — loop-iteration guards inside the C
+library's multibyte conversion state machines, which byte-swap a halfword and
+dispatch on a sixteen-entry table four instructions away. The eighteen `4080`
+are all `addi rX, rY, 4080` beside a `bl` or a load: a structure member's
+offset, the shape *Ratatosk* found eight times and *Graces* four.
+
+**The constant scan, on the second instruction set, and this is the part that
+is new.** A decompressor is exactly the work a PlayStation 3 port moves onto
+an SPU, and a `--ppc` scan that returns zero has covered one of the two
+processors. **There are eight SPU modules**, embedded in the PPU executable as
+complete ELF32 images with `e_machine` 23, 873,408 bytes in all, each one's
+last program header ending where the next module begins. There is no `.sprx`,
+no `.self` and no separate Sony module anywhere on the disc, so those eight
+are the whole inventory and all eight were scanned.
+
+**The SPU splits the five constants by encoding, as ARM does and
+differently.** Its RI10 form — `ai`, `ahi`, `andi`, `ori`, `ceqi`, `cgti` and
+the rest — carries a **signed ten-bit** field that reaches −512 to 511, so
+**none of the five can be encoded in it**. They reach only `il` and `iohl`
+(RI16) and `ila` (RI18). And `lqd`/`stqd` carry a signed ten-bit displacement
+**scaled by sixteen**, which reaches 4080 and cannot reach the other four —
+which is not a curiosity, because **4080 is 4078 rounded up to a multiple of
+sixteen**, the exact edit *Symphonia*'s 2004 PlayStation 2 port made so a
+quadword store could be used, and the SPU has nothing but quadword stores.
+That is the single most likely place for this codec's ring clear to appear on
+this machine. The answer over all eight modules:
+
+| | |
+|---|---:|
+| RI16 instructions | 4,400 |
+| RI18 instructions | 481 |
+| RI10 instructions, none of which can hold the value | 10,627 |
+| `lqd` / `stqd` quadword displacements | 7,935 |
+| 4-byte-aligned words | 218,352 |
+| **4078 / 4079 / 4070 / 4071 / 4080, any encoding** | **0** |
+
+**The structural probe.** Twelve of twelve detectors fire on hand-assembled
+fingerprints, including both refill spellings and both high-nibble opcodes —
+the *Vesperia* and *Graces* corrections. Over 3,574,186 words it finds two
+`ori rX,rX,0xFF00` refills and three twelve-bit masks, all five read and all
+five innocent: the refills are a heap allocator building bounds and the masks
+are alignment tests inside the same multibyte conversion family as the `4079`
+sites. **Zero clusters carrying two or more distinct fingerprints**, where the
+2003 build has one per decoder copy and the 2009 build has one per copy. And
+it has **no same-compiler positive to be calibrated against**, which is said
+above the numbers rather than below them.
+
+**The byte test has no denominator here, and this is the worst ceiling the
+corpus has measured.** The instrument control passes — 872 bytes of the 2003
+decoder score **138** against the 2009 Wii executable, reproducing that
+repository's published figure, in the same run in which they score **8** here
+against a control of **20** for an arbitrary routine of the same length. But
+`common_run.py` over the two whole executable sections finds a longest shared
+run of **96 bytes with six distinct byte values**, and it is
+`38 60 00 00 4e 80 00 20` — `li r3,0 ; blr` — repeated twelve times, a table
+of empty stubs present in any PowerPC image ever linked. Metrowerks PowerPC 32
+against the PlayStation 3 SDK's PowerPC 64 share nothing else. Ninety-six is
+longer than the Xbox 360's twenty-eight and worth less, and no byte figure
+from this pair is quoted as evidence. **Section 7 gains a clause: quote the
+distinct-byte-value count beside the run length, because the two together are
+the result and the length alone is not.**
+
+**The census.** Every payload at offset zero in both dialects —
+**213,683 payloads and 9,043,008,773 bytes**, with `undescended` at **0** —
+returns **0 blocks**, against the 1995 cartridge's **1,089** in the same
+session. The blind pass at every offset was partitioned into disjoint path
+lists and its coverage is published as a figure; what it reached returns 35
+survivors of 16 to 768 packed bytes, every one read. Two of them are the
+instructive kind: **seven hierarchy members each yield one candidate at the
+same offset**, and the nine bytes are `03 00 03 00 00 00 06 00 00` — a 3
+followed by 0x300 and 0x600, two round numbers in a node table. Real blocks
+come in families; the most any one payload here carries is two.
+
+**What is there instead is the studio's own, and it is new to this corpus.**
+The disc's thirty files include one container, `TLFILE.TLDAT`, of 2,359,686,621
+bytes and **151,862 members**, indexed by `FILEHEADER.TOFHDB` — and the
+pairing is measured rather than deduced: **151,862 of 151,862 entries land
+inside it, the furthest ends at the file's length to the byte, and 0 bytes are
+unaccounted.** That is the check that *failed* on *Graces*'s `.txm`/`.txv`
+pair and is still open there.
+
+**28,867 of those members are compressed and every one wears `TLZC`**:
+thirty-one bytes — a magic, a version `0x00000401`, the packed and unpacked
+sizes, an LZMA properties byte `0x5D` and a 64 KiB dictionary — followed by a
+**table of `u16` chunk lengths** and then the chunks, each an independent
+LZMA1 stream of 64 KiB. **28,867 of 28,867 decode to exactly the plaintext
+length the container's index states independently**, 1,176,336,129 packed
+producing 3,253,699,438 in 64,500 chunks, with one version, one properties
+byte and one dictionary size across the whole population.
+
+So the answer to *what does the platform give you* is, for the third time
+since the Game Boy Advance, *something* — and this build did not take it. The
+PlayStation 3 supplies zlib, and the `SELF` format itself deflates segments;
+this executable's segments are stored, `zlib` and `inflate` return 3 and 2
+hits against a chance rate of 2.59 on the decrypted corpus, `PSARC` returns
+zero, and the studio shipped an LZMA wrapper of its own design instead.
+
+**Two of the three things this document tracks crossed and one did not, in a
+new arrangement.** `FPS4` — which crossed from the Xbox 360 to the Nintendo DS
+in five months changing byte order to suit the machine, and was still on the
+Wii in 2009 with 4,832 archives — returns **zero hits on 6.95 GB**. So do
+`CPK ` and `CRILAYLA`; `MSCF` returns one against a chance rate of 1.62 and
+`5b 80 80 8d` four against 2.59. But **`SPKD` crossed**: one member of the
+container is the same big-endian sound-pack directory *Graces* carried, nine
+named entries against nineteen, and on *Graces* its blocks were the codec
+while here all nine members are `SHBP` sound banks. And **the index/payload
+split crossed** — `m.b`/`m.dat` on *Hearts*, `.txm`/`.txv` on *Graces* — as
+**adjacent members of one container**, verified on 51,694 pairs with zero
+exceptions.
+
+**The project number is `TO11`, and it is not a tag on a path.** It is the
+**root C++ namespace of the entire game**: 161 distinct Itanium-mangled RTTI
+names rooted at it, 133 distinct internal asset names containing it, 12,035
+hits on the decrypted corpus against a chance rate of 2.59, an extension of
+its own (`TO11RAW`), music track names (`MUS_TO11_BTL_JUD_001`), and two
+devkit roots in one string table beside the product code:
+
+```
+TO11
+C:/TO11
+S:/TO11/Develop
+BLJS10120
+```
+
+`TOX` is the burn label and nothing else — 739 hits against a chance rate of
+664, and every one of the 63 internal names containing it is `TOXIC`. `TO10`
+returns **zero** on the image, on the decrypted corpus and among 309,774
+internal names. There is no second numbering by machine: `TOPS3`, `TOP311`,
+`TOPS311`, `TOPS3_11`, `TOS11` and `TOX11` are all zero.
+
+**And the engine question this document has carried since 2009 moves.**
+*Graces* carries 26 `TL::` class names; this build carries **80**, and they
+are a full engine layer — a file core, a page heap, a memory compactor, a
+command-buffer queue, a world model, a texture interface, a track and stream
+family. **One name is identical**, as an RTTI symbol, byte for byte:
+`N2TL15CCaptureTextureE`. The rest corresponds across a renaming pass —
+`CTextureIF` → `ITexture`, `CTrack3D` → `CTrack3DControl`, `CStreamBase` →
+`CStreamTrackBase`, `CSeLabelDictionary` + `CVoiceLabelDictionary` →
+`CSoundLabelDictionary`. And **twenty-five of the eighty carry `TO11` as a
+suffix** — `TL::CWorldModelTO11`, `TL::CShaderModelToonTO11`,
+`TL::IWorldElementTO11` — so the engine's generic class and this project's
+subclass of it sit in the engine's own namespace. `TL::CCaptureTexture` and
+`TL::CCaptureTextureTO11` are both present.
+
+Two absences belong in the same breath: `tlVec` and `tlMtx` are gone, and so
+is **`Flagment`**, the misspelling that would have been the cheapest possible
+proof. So `TL` on the Wii in 2009 and `TL` on the PlayStation 3 in 2011 are
+the same engine namespace by measurement; whether either is the codebase
+*Berseria* runs on in 2017 is still **Consistent** and untouched.
+
+**Nothing crosses at the asset level, for the fifth time.** Zero
+byte-identical payloads between 92,660 distinct payloads here and the 7,905
+that repository extracted. The internal-name intersection is 6,527 of 309,774
+against 248,596 and it was **read**: font glyph-order strings, **romaji
+skeleton names** — `BONE_ATAMA`, `BONE_KUBI`, `BONE_KOSHI`, `BONE_AGO`,
+`BONE_SEBONE00` — and generic effect vocabulary. Not one asset of the
+studio's own. The rigging convention has now crossed twice, over three builds
+and two machines. Every other title's cast returns **zero**, and the two that
+need reading dissolve: `stan` occurs in 64 names and every one is `DISTANT`,
+`STAND` or `DISTANCE`; `luke` occurs in two and both are non-words.
+
+**And the cast is spelled a third way again.** The PlayStation builds used
+whole names, *Graces* used four-letter codes (`ASBE` 611, `SOFI` 676), and
+this build uses **three letters from the Japanese romanisation**: `JUR` 3,541,
+`MIR` 3,430, `ELI` 2,737, `ALV` 2,559, `REI` 2,314 (Leia), `TIP` 2,277
+(Teepo), `LOE` 2,180 (Rowen), 86 distinct codes in all. A search on `leia` or
+`rowen` returns zero and an absence that is not one.
+
+**Who made it.** *Graces* named a mailbox, two intranet boards, a certificate
+and shipped a complete in-house editor. None of that is here: `.co.jp`,
+`http://`, `cyclamen`, `take_njd`, `chr_edit` all zero. What is here is the
+developer as three logo asset ids — `GUI_LGO_000_BNG`, `GUI_LGO_000_NAMCO`,
+**`GUI_LGO_000_NAMCOTALESSTUDIO`** — and *Graces*'s audio middleware banner,
+unchanged, one hit on the whole decrypted corpus: `Siren14 Version 3.02 For
+Products … 2009.4.9 … NAMCO BANDAI GAMES … Nu-Sound`. RTTI is **on**: 276
+distinct mangled class names, where *Ratatosk* had 37 and *Hearts* five. The
+build host was Windows with **Boost 1.42.0**, named in 487 assertion paths,
+and the SDK stamps itself **`p360001`** — PlayStation 3 SDK 3.6.0 — once per
+linked library, 22 libraries and 403 occurrences, which is the most precise
+toolchain identification any build in this corpus has given.
+
+Two more numbers, because they are the extremes of their kind here. The disc
+is the **fullest** in the corpus: 1,076,190 bytes are covered by no file,
+**0.0155%**, and there is no fill pattern at all — the leftover is the file
+system's own metadata plus zeros, against *Tempest*'s 41.3% and *Vesperia*'s
+19.08%. And it carries the **largest single leftover** the corpus has met:
+`FILEHEADER_TOFHDB.DEBUG`, 41,991,204 bytes of Shift-JIS XML on the retail
+disc — the whole container directory written out longhand, agreeing with the
+retail index in **151,862 of 151,862 file entries and 149,782 of 149,782 hash
+entries**.
+[ps3-talesofxillia-doc](https://github.com/vs-sr-dev/ps3-talesofxillia-doc).
+
 ### The boundary tested on a single disc
 
 The *Tales of Destiny 2* disc is the sharpest negative control this
@@ -1580,6 +1825,19 @@ own packer.
 *Berseria* is a different lineage entirely: BANDAI NAMCO Studios' TL engine, a
 2013-era middleware stack, zlib, and an obfuscated container. The series name
 is the only thing it shares with the two above.
+
+**The eighteenth build narrows that sentence and it should be read as
+narrowed.** *Tales of Xillia* (PlayStation 3, 2011) carries **80 `TL::` class
+names**, one of them — `TL::CCaptureTexture` — identical as an RTTI symbol to
+one of the 26 the 2009 Wii build carries, and a subsystem vocabulary that
+corresponds across a renaming pass; twenty-five more are the engine's classes
+with this project's tag as a suffix, `TL::CWorldModelTO11` and its relatives.
+So `TL` on the Wii in 2009 and `TL` on the PlayStation 3 in 2011 are **one
+engine namespace, by measurement**, and the studio line was on it two years
+before *Berseria*. What is still unmeasured is the step from 2011 to 2017; the
+claim that *Berseria*'s TL engine is that codebase remains **Consistent**.
+What is not in doubt is that the engine and the codec are separable: this build
+has the engine, carries the line's project number, and has no codec at all.
 
 ### The boundary tested off the console entirely
 
@@ -1633,6 +1891,17 @@ boundary is not the company (Namco shipped *Venus & Braves* without it), not
 the console (both PlayStation 2 games are on one disc), and not the series
 name (*Berseria* shares only that). Anything that narrows or widens it is
 worth adding here.
+
+**And the eighteenth build shows that the boundary is no longer where the
+codebase is.** *Tales of Xillia* (2011) is inside every fence this paragraph
+draws — the studio line, the series, the project-number sequence, and now
+demonstrably the same **engine namespace** as the 2009 build that carries the
+codec — and it has no codec. That is the first time a build has been shown to
+be inside the codebase by a measurement other than the codec itself and to
+lack the codec anyway. The codebase is therefore a *necessary* condition and
+not a sufficient one, and after 2009 it stops predicting the answer: what the
+corpus can still say is that no build outside this codebase has ever had the
+format, and what it can no longer say is that a build inside it will.
 
 What the eleventh build adds is a **limit on what a single negative can say**.
 *Venus & Braves* changed the team and held the disc, the console and the year
@@ -2726,6 +2995,152 @@ small, and the honest response is the one this document already prescribes for
 the other case: **partition the work and publish the exact coverage**, rather
 than quote a total that was never reached.
 
+### An encryption flag is a declaration, and entropy does not check it
+
+Section 7 has had a *step zero* on four platforms now, and each has been a
+case of *the bytes are not plaintext and the scan cannot tell*. The
+eighteenth build supplies the opposite failure and it is worse, because it
+costs a whole session rather than a false negative: **the medium says it is
+encrypted and it is not**.
+
+A PlayStation 3 disc's sector 0 is a region table declaring which sectors are
+AES-128-CBC encrypted under the disc key. *Tales of Xillia*'s declares
+**96.07%** of the disc, and the image is a decrypted dump that kept the
+original table. Two checks that look decisive are not:
+
+* **entropy.** Sampling one mebibyte at eight points in each region, the
+  declared-*plain* regions reach **7.992** and **8.000** bits per byte and the
+  declared-*encrypted* one never exceeds **7.987**. The high plain samples are
+  a PNG, an ATRAC3 stream and Sony's firmware installer. **On a disc of this
+  era, entropy measures the middleware.** The 7.895 bits/byte that opened the
+  session was measured inside a container of LZMA-compressed assets;
+* **the first sector of the encrypted region.** On every PS3 disc it is
+  `LIC.DAT` and it begins `PS3LICDA` in the clear. It says nothing about the
+  rest.
+
+**The check that works is semantic and free: find the files whose first bytes
+are known and see whether they are there.** `EBOOT.BIN` must begin `SCE\0`,
+`PARAM.SFO` must begin `\0PSF`, a PNG must begin with the PNG magic. And the
+strongest form of it is a size the payload states about itself: **17 of 17
+Bink headers on that disc state a body length exactly equal to the file
+system's size for that file, less eight.** Ciphertext does not do that
+seventeen times.
+
+The general rule: **a flag in a header is a claim about the bytes, not a
+measurement of them, and the cheap statistical check may agree with either
+answer.** Verify with a structure the format itself has to get right.
+
+### RTTI class names have two forms and they are different populations
+
+Every repository in this corpus that publishes a class inventory publishes it
+**demangled** — `TL::CCaptureTexture`. On a compiler that uses the Itanium
+ABI, that is not what is in the image. The type-info string is
+`N2TL15CCaptureTextureE`, and the demangled form appears only inside assertion
+text and `__PRETTY_FUNCTION__` strings, which cover a different and smaller
+set of classes.
+
+Searching the eighteenth build's decrypted executable for the sixteenth
+build's 26 published `TL::` names returns **0 of 26**, which reads as *the
+engine namespace crossed but no class did*. Harvesting the mangled form and
+demangling it returns 80 names and an intersection of **1** —
+`TL::CCaptureTexture`, byte for byte as a symbol.
+
+So: **harvest both forms, say which is which, and never intersect one against
+a list built from the other.** The MSVC equivalent (`rtti.py`) reads type
+descriptors and does not have this problem; the Itanium one does, and it fails
+towards an absence.
+
+### On a platform with a signed executable, a disc-level sweep is blind to the code
+
+Every needle sweep in this document has been run over the medium, and on the
+Nintendo and Microsoft targets that covered the code with the data. On the
+PlayStation 3 it does not: the executable's segments are encrypted, so every
+string the game's own code contains returns **zero** on the image and the zero
+means nothing.
+
+On the eighteenth build, `Siren14` and `Nu-Sound` — the two needles that
+identified the sixteenth build's audio middleware — return **0** on the disc
+and **1 each** on the decrypted corpus, at a chance rate below 0.001. They are
+the same banner, with the same 2009 date.
+
+**Run the sweep twice and publish both**, because neither covers the medium:
+one over the image as it ships, one over everything after step zero.
+
+### Quote the distinct-byte-value count beside the longest run
+
+Section 7 already says to print the byte histogram of a winning run, after the
+sixteenth build's 138-byte result turned out to have twelve distinct values.
+The eighteenth build shows why the *number* belongs in the table rather than
+in a footnote.
+
+| pair | longest shared run | distinct byte values | worth |
+|---|---:|---:|---|
+| GameCube 2003 ↔ Wii 2008, controls subtracted | 835 | 106 | a real shared object |
+| GameCube 2003 ↔ Xbox 360 2008 | 28 | 11 | nothing |
+| **Wii 2009 ↔ PlayStation 3 2011** | **96** | **6** | **nothing** |
+
+Ninety-six is longer than twenty-eight and worth less: the run is
+`38 60 00 00 4e 80 00 20` — `li r3,0 ; blr` — twelve times over, a table of
+empty stubs any PowerPC linker emits. A ceiling quoted as a length alone would
+make the PlayStation 3 pair look three times better conditioned than the Xbox
+360 pair, and it is worse.
+
+### A cast that does not answer to its own name
+
+The sixteenth build recorded that its cast lived as four-letter codes — `ASBE`,
+`SOFI` — so a search on `asbel` returned an absence that was not one. The
+eighteenth build does it again with **three letters, from the Japanese
+romanisation**: `JUR` for Jude, `MIR` for Milla, **`REI` for Leia**, **`LOE`
+for Rowen**, **`TIP` for Teepo**. `leia`, `rowen` and `teepo` return zero
+across 309,774 internal names; the codes return 2,314, 2,180 and 2,277.
+
+The rule this gives is not "try three letters as well". It is: **enumerate the
+codes the build actually uses before searching for any name at all.** Here
+that is one regular expression over the model members —
+`CHR_([A-Z]{3})_[0-9]{3}` — which returns 86 codes and makes every subsequent
+zero readable.
+
+### On a Cell target the census's slowest payload is the executable
+
+Section 7 says to sweep per member because `plausible()` is bounded by the
+buffer, and the sixteenth build added that the bound is not always enough
+because dense arrays of small integers produce many candidates.
+
+The eighteenth build adds the extreme case, and it is not the data: it is the
+**executable**. A 14,810,328-byte ELF swept in overlapping 8 MiB windows took
+longer than the other **9,028,198,445 bytes of the disc put together** — a
+container of 151,862 members, seventeen Bink movies walked into 61,753 frames,
+and the complement, all of which finished in under 42 minutes each across
+twelve processes. The reason is structural: an executable is one buffer with
+no internal boundaries, so the plausibility bound is the window size and every
+four-byte value below it passes.
+
+Two responses, and the first is the one that matters: **the constant scan and
+the structural probe are the right instruments for code, and a blind LZSS
+sweep over an executable adds almost nothing to them.** If it is run anyway,
+give it its own partition so its cost is visible and the coverage of
+everything else is not held hostage to it.
+
+### When a container hands you two encodings of one table, use both
+
+The sixteenth build's `CPK` gave the corpus a free positive control:
+`ExtractSize`, written by the packer and by nothing of ours, against which a
+decompressor can be checked without trusting itself.
+
+The eighteenth build gives a stronger version and it is worth naming as a
+pattern. `TLFILE.TLDAT`'s index states each member's plaintext length; the
+`TLZC` envelope on each compressed member states it a second time; and the
+disc **also carries the whole index again as 42 MB of XML**, shipped by
+accident. Three independent statements of the same 151,862 numbers.
+
+With them: 151,862 of 151,862 entries land inside the payload, the furthest
+ends at its length to the byte, 0 bytes are unaccounted, 28,867 of 28,867
+compressed members decode to their declared length, and the retail and debug
+indexes agree in 151,862 of 151,862 file entries and 149,782 of 149,782 hash
+entries. **Look for the second statement before writing the reader, not
+after**, because it is what turns a decompressor that seems to work into one
+that is checked.
+
 ### What does *not* work: comparing routines across instruction sets
 
 The opcode-sequence measure in this repository's own tooling works because
@@ -2819,14 +3234,25 @@ instead. See
   producing 97,545,122 — every one of them in the `psx` dialect and not one in
   the other. It is also the first build in the corpus where **two copies in one
   executable use different cursors**: 4078 in the copy without the run escape
-  and 4079 in the copy with it. Two dialects, sixteen builds, eight platforms,
-  both byte orders, three compilers, fourteen years, and the split is still
-  1995/1997.
+  and 4079 in the copy with it. The seventeenth and eighteenth,
+  *Tales of Xillia* (PlayStation 3, 8 September 2011) — the seventeenth
+  numbered position in this list is *Graces*'s Wii disc and the eighteenth is
+  this one — adds none because it has no codec, and it is the first build here
+  to return that zero on **two instruction sets**: zero of the five constants
+  over **3,685,471** PowerPC instruction words, and zero over **4,400** SPU
+  RI16 instructions, **481** RI18, **7,935** quadword displacements and
+  **218,352** aligned words in **eight** embedded SPU modules, on a machine
+  where the RI10 form cannot encode any of them and only `4080` is reachable
+  as a scaled displacement. **0 blocks in 213,683 payloads and 9,043,008,773
+  bytes**, both dialects, `undescended` zero, against the same 1,089.
+  Two dialects, eighteen builds, nine platforms, both byte orders, four
+  compilers, sixteen years, and the split is still 1995/1997.
   What is left to test is the 2005 PSP port of *Eternia*, the 2006 PlayStation 2
   remake of *Destiny*, *Radiant Mythology* (PSP, 2006), the 2009 PlayStation 3
-  port of *Vesperia*, and — after the sixteenth build — the 2011 PlayStation 3
-  *Tales of Graces f*, which is one of these projects on a second machine, and
-  *Xillia* (PS3, 2011), which the project-tag sequence predicts as `TO11`.
+  port of *Vesperia*, and the 2011 PlayStation 3 *Tales of Graces f*, which is
+  one of these projects on a second machine — and which, after the eighteenth
+  build, is also the only known way to give the byte test a denominator on the
+  PlayStation 3 SDK's compiler.
 * **~~Was the source ever edited after 1997?~~** *Answered, and then
   re-answered.* The first answer was "yes, once, in 2004". *Tales of Rebirth*,
   three months after *Symphonia*'s PlayStation 2 port and on the same R5900,
@@ -3176,6 +3602,29 @@ instead. See
   container arrive and the envelope leaves. So the three are not a set that
   trades one member per generation; they are three independent choices, and
   what decides them is the project.
+
+  **The eighteenth build confirms that and then adds a fourth thing to the
+  list.** *Tales of Xillia* (PlayStation 3, 2011) drops **all three**: no
+  codec, no `MSCF` envelope, no `FPS4` — the container that had crossed from
+  the Xbox 360 to the Nintendo DS in five months, changing byte order to suit
+  the machine, and was still on the Wii in 2009 with 4,832 archives, returns
+  **zero hits on 6.95 GB**. In their place is one container of the studio's
+  own with 151,862 members, and one compressor of the studio's own around
+  **LZMA**, on 28,867 of 28,867 compressed members.
+
+  So a project can decline all three at once, which had not been observed, and
+  the three are independent in the strong sense rather than merely in pairs.
+
+  **And two smaller things did cross, which is what makes the statement about
+  the three sharper rather than weaker.** `SPKD` — the big-endian sound-pack
+  directory *Graces* carried, whose blocks there were the codec — is on this
+  disc with nine named entries holding sound banks. And the **index/payload
+  split** (`m.b`/`m.dat` on *Hearts*, `.txm`/`.txv` on *Graces*) is here as
+  adjacent members of one container, verified on 51,694 pairs with zero
+  exceptions. What travels between builds of this line is not any of the three
+  named formats; it is a set of *conventions* — a directory shape, a
+  header/payload pairing, a rigging vocabulary — that survives every change of
+  format underneath them.
 
   **What it cannot do is name the hands, and that has to be said in the same
   breath as the tag.** These cartridges name their developer **nowhere** — not
