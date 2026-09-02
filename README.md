@@ -996,8 +996,11 @@ own identity.
 Documentation: [CC BY 4.0](LICENSE-DOCS). `tales_block.py`: [MIT](LICENSE).
 
 *Tales of Phantasia*, *Tales of Destiny*, *Tales of Eternia*, *Tales of
-Destiny 2*, *Tales of Symphonia*, *Tales of Rebirth*, *Tales of Legendia*,
-*Tales of the Abyss*, *Tales of the Tempest* and *Venus & Braves* are
-trademarks of BANDAI NAMCO Entertainment.
+Destiny 2*, *Venus & Braves*, *Tales of Symphonia*, *Tales of Symphonia:
+Ratatosk no Kishi*, *Tales of Rebirth*, *Tales of Tactics*, *Tales of
+Legendia*, *Tales of the Abyss*, *Tales of the Tempest*, *Tales of Innocence*,
+*Tales of Vesperia*, *Tales of Hearts*, *Tales of Graces*, *Tales of Xillia*
+and *Tales of Berseria* are trademarks of BANDAI NAMCO Entertainment.
 This project is unaffiliated with and unendorsed by Bandai Namco, Namco Tales
-Studio, Wolf Team, Nintendo or Sony Interactive Entertainment.
+Studio, Wolf Team, Alfa System, Dimps, Nintendo, Sony Interactive
+Entertainment, Microsoft or NTT DoCoMo.
